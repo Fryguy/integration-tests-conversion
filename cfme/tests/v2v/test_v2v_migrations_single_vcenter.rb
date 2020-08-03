@@ -132,7 +132,7 @@ def test_multi_host_multi_vm_migration(request, appliance, provider, source_type
 end
 def test_migration_special_char_name(appliance, provider, request, mapping_data_vm_obj_mini)
   # Tests migration where name of migration plan is comprised of special non-alphanumeric
-  #      characters, such as '@#$(&#@('.
+  #      characters, such as '@\#$(&\#@('.
   # 
   #   Polarion:
   #       assignee: sshveta

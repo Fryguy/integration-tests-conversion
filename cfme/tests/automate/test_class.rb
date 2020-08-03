@@ -173,7 +173,7 @@ def test_state_machine_variable(klass)
         ")
   script2 = dedent("
         state_value = $evm.get_state_var(:var1)
-        $evm.log(\'info\', \"Value of state var returned #{state_value}\")
+        $evm.log(\'info\', \"Value of state var returned \#{state_value}\")
         ")
   klass.schema.add_fields(*[schema_field1, schema_field2].map{|field| {"name" => field, "type" => "State", "data_type" => "String"}})
   methods = [script1, script2].map{|script| klass.methods.create(name: fauxfactory.gen_alphanumeric(), location: "inline", script: script)}.to_a

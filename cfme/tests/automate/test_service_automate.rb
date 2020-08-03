@@ -68,10 +68,10 @@ def test_user_requester_for_lifecycle_provision(request, appliance, provider, se
   #   
   script = "
     user = $evm.root[\'user\']
-    $evm.log(:info, \"This is the user: #{user.userid}\")
+    $evm.log(:info, \"This is the user: \#{user.userid}\")
 
     $evm.log(\"info\", \"Listing Root Object Attributes:\")
-    $evm.root.attributes.sort.each { |k, v| $evm.log(\"info\", \"\t#{k}: #{v}\") }
+    $evm.root.attributes.sort.each { |k, v| $evm.log(\"info\", \"\t\#{k}: \#{v}\") }
     $evm.log(\"info\", \"===========================================\")
     "
   infra_validate_request.update(updates: {"script" => script})
@@ -148,7 +148,7 @@ def catalog_item_setup(request, copy_klass, domain, catalog, dialog)
         ")
   script2 = dedent("
         var = $evm.service_var_exists?(\'service_var\') && $evm.get_service_var(\'service_var\')
-        $evm.log(\"info\", \"service var: service_var = #{var}\")
+        $evm.log(\"info\", \"service var: service_var = \#{var}\")
         ")
   script = [script1, script2]
   var = fauxfactory.gen_alpha()

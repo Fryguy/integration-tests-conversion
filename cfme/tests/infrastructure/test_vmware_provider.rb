@@ -348,7 +348,7 @@ def test_esxi_reboot_not_orphan_vms(appliance, provider)
   #               \'\'\'
   #               ems = ManageIQ::Providers::Vmware::InfraManager.find_by(:name => \"name of your vc\")
   #               vm = ems.vms.last # Or do vms[index] and find a vm to work with
-  #               puts \"VM_ID [#{vm.id}],name [#{vm.name}],uid[#{vm.uid_ems}]\"
+  #               puts \"VM_ID [\#{vm.id}],name [\#{vm.name}],uid[\#{vm.uid_ems}]\"
   #               vm.update_attributes(:uid_ems => SecureRandom.uuid)
   #               \'\'\'
   #           3.Refresh the provider
@@ -357,7 +357,7 @@ def test_esxi_reboot_not_orphan_vms(appliance, provider)
   #           2.VM\'s uid_ems is modified
   #           3.After a full refresh, VM is still active and usable in cfme, not archived/orphaned.
   #   
-  command = ("\'ems=ManageIQ::Providers::Vmware::InfraManager.find_by(:name =>\"" + provider.name) + "\");                vm = ems.vms.last;                puts \"VM_ID=#{vm.id} name=[#{vm.name}] uid=#{vm.uid_ems}\";                vm.update_attributes(:uid_ems => SecureRandom.uuid);                puts \"VM_ID=#{vm.id} name=[#{vm.name}] uid=#{vm.uid_ems}\"\'"
+  command = ("\'ems=ManageIQ::Providers::Vmware::InfraManager.find_by(:name =>\"" + provider.name) + "\");                vm = ems.vms.last;                puts \"VM_ID=\#{vm.id} name=[\#{vm.name}] uid=\#{vm.uid_ems}\";                vm.update_attributes(:uid_ems => SecureRandom.uuid);                puts \"VM_ID=\#{vm.id} name=[\#{vm.name}] uid=\#{vm.uid_ems}\"\'"
   result = appliance.ssh_client.run_rails_command(command)
   provider.refresh_provider_relationships()
   raise "SSH Command result was unsuccessful: #{result}" unless result.success
@@ -398,7 +398,7 @@ def test_switches_class_present_ems(appliance, provider)
   #           2.p.switches.first.class.name returns exit status 0(success) and lists class name
   #           containing HostVirtualSwitch
   #   
-  command = "\'$evm = MiqAeMethodService::MiqAeService.new(MiqAeEngine::MiqAeWorkspaceRuntime.new);                p = $evm.vmdb(:ems_infra).first;                p.class.name;                puts \"class name [#{p.switches.first.class.name}]\"\'
+  command = "\'$evm = MiqAeMethodService::MiqAeService.new(MiqAeEngine::MiqAeWorkspaceRuntime.new);                p = $evm.vmdb(:ems_infra).first;                p.class.name;                puts \"class name [\#{p.switches.first.class.name}]\"\'
                 "
   result = appliance.ssh_client.run_rails_command(command)
   raise "SSH Command result was unsuccessful: #{result}" unless result.success

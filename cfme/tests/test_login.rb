@@ -44,7 +44,7 @@ def test_bad_password(context, request, appliance)
   #       tags: rbac
   #   
   username = conf.credentials["default"]["username"]
-  password = "badpassword@#$"
+  password = "badpassword@\#$"
   cred = Credential(principal: username, secret: password)
   user = appliance.collections.users.instantiate(credential: cred, name: "Administrator")
   appliance.context.use(context) {

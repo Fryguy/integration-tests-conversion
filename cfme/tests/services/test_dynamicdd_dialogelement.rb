@@ -29,12 +29,12 @@ METHOD_TORSO = "
 # Method for logging
 def log(level, message)
   @method = \'Service Dialog Provider Select\'
-  $evm.log(level, \"#{@method} - #{message}\")
+  $evm.log(level, \"\#{@method} - \#{message}\")
 end
 
 # Start Here
 log(:info, \" - Listing Root Object Attributes:\") if @debug
-$evm.root.attributes.sort.each { |k, v| $evm.log(\'info\', \"#{@method} - \t#{k}: #{v}\") if @debug }
+$evm.root.attributes.sort.each { |k, v| $evm.log(\'info\', \"\#{@method} - \t\#{k}: \#{v}\") if @debug }
 log(:info, \"===========================================\") if @debug
 
         dialog_field = $evm.object

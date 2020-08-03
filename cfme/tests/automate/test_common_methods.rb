@@ -105,9 +105,9 @@ def test_miq_password_decrypt(appliance, klass)
   #   
   script = "require \"manageiq-password\"
 root_password = #{appliance.password_gem}.encrypt(\"abc\")
-$evm.log(\"info\", \"Root Password is #{root_password}\")
+$evm.log(\"info\", \"Root Password is \#{root_password}\")
 root_password_decrypted = #{appliance.password_gem}.decrypt(root_password)
-$evm.log(\"info\", \"Decrypted password is #{root_password_decrypted}\")"
+$evm.log(\"info\", \"Decrypted password is \#{root_password_decrypted}\")"
   klass.schema.add_fields({"name" => "execute", "type" => "Method", "data_type" => "String"})
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: script)
   instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"execute" => {"value" => method.name}})
@@ -134,9 +134,9 @@ def test_service_retirement_from_automate_method(request, generic_catalog_item, 
   #           3. Create retire_automation_service instance and set meth5 to retire_automation_service.
   #           4. Create retire_automation_service method with sample code given below:
   #              > service = $evm.root[\'service\']
-  #              > $evm.log(:info, \"create_retire_request for  service #{service}\")
+  #              > $evm.log(:info, \"create_retire_request for  service \#{service}\")
   #              > request = $evm.execute(:create_retire_request, service)
-  #              > $evm.log(:info, \"Create request for create_retire_request #{request}\")
+  #              > $evm.log(:info, \"Create request for create_retire_request \#{request}\")
   #           5. Execute this method using simulation
   #       expectedResults:
   #           1. Service provision request should be provisioned successfully
@@ -150,9 +150,9 @@ def test_service_retirement_from_automate_method(request, generic_catalog_item, 
   wait_for(lambda{|| service_request.request_state == "finished"}, fail_func: service_request.reload, timeout: 180, delay: 10)
   script = dedent("
         service = $evm.root['service']
-        $evm.log(:info, 'create_retire_request for service #{service}')
+        $evm.log(:info, 'create_retire_request for service \#{service}')
         request = $evm.execute(:create_retire_request, service)
-        $evm.log(:info, 'Create request for create_retire_request #{request}')
+        $evm.log(:info, 'Create request for create_retire_request \#{request}')
         ")
   instance = custom_instance.(ruby_code: script)
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Create request for create_retire_request.*"])).waiting(timeout: 120) {
@@ -269,10 +269,10 @@ def test_list_of_diff_vm_storages_via_rails(appliance, setup_provider, provider,
 vm = vmware.vms.select {|v| v.name == \"#{testing_vm.name}\"}.first
 storage = vm.storage
 storage_name = storage.name
-$evm.log(:info, \"storage name: #{storage_name}\")
+$evm.log(:info, \"storage name: \#{storage_name}\")
 storages = vm.storages
 storage_name = storages[0].name
-$evm.log(:info, \"storages name: #{storage_name}\")
+$evm.log(:info, \"storages name: \#{storage_name}\")
 ")
   instance = custom_instance.(ruby_code: list_storages)
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*storage name: #{testing_vm.datastore.name}.*", ".*storages name: #{testing_vm.datastore.name}.*"])).waiting(timeout: 120) {

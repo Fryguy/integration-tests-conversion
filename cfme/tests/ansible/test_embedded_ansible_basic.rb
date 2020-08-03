@@ -220,7 +220,7 @@ def test_control_add_ansible_playbook_action_invalid_address(request, appliance,
   #       casecomponent: Control
   #       initialEstimate: 1/12h
   #   
-  action = action_collection.create(fauxfactory.gen_alphanumeric(15, start: "action_"), action_type: "Run Ansible Playbook", action_values: {"run_ansible_playbook" => {"playbook_catalog_item" => ansible_catalog_item.name, "inventory" => {"specific_hosts" => true, "hosts" => "invalid_address_!@#$%^&*"}}})
+  action = action_collection.create(fauxfactory.gen_alphanumeric(15, start: "action_"), action_type: "Run Ansible Playbook", action_values: {"run_ansible_playbook" => {"playbook_catalog_item" => ansible_catalog_item.name, "inventory" => {"specific_hosts" => true, "hosts" => "invalid_address_!@\#$%^&*"}}})
   _finalizer = lambda do
     if is_bool(action.exists)
       appliance.rest_api.collections.actions.get(description: action.description).action.delete()
@@ -228,7 +228,7 @@ def test_control_add_ansible_playbook_action_invalid_address(request, appliance,
   end
   raise unless action.exists
   view = navigate_to(action, "Edit")
-  raise unless view.run_ansible_playbook.inventory.hosts.value == "invalid_address_!@#$%^&*"
+  raise unless view.run_ansible_playbook.inventory.hosts.value == "invalid_address_!@\#$%^&*"
   view.cancel_button.click()
 end
 def test_embedded_ansible_credential_with_private_key(request, wait_for_ansible, credentials_collection)

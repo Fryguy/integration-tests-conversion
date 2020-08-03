@@ -19,7 +19,7 @@ require_relative 'cfme/utils/log'
 include Cfme::Utils::Log
 pytestmark = [pytest.mark.usefixtures("setup_provider"), pytest.mark.tier(2), pytest.mark.provider([ContainersProvider], scope: "function"), test_requirements.containers]
 def get_random_string(length)
-  valid_chars = (digits + ascii_letters) + (" !@#$%^&*()")
+  valid_chars = (digits + ascii_letters) + (" !@\#$%^&*()")
   out = length.times.map{|_| choice(valid_chars)}.join("")
   return re.sub("\\s+", " ", out)
 end

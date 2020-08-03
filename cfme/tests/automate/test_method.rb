@@ -242,12 +242,12 @@ def test_automate_generic_object_service_associations(appliance, klass, go_servi
   script = "go_class = $evm.vmdb(:generic_object_definition).find_by(:name => \"{name}\")
 ".format(name: generic_object_definition.name)
   script = script + "load_balancer = go_class.create_object(:name => \"Test Load Balancer\", :location => \"Mahwah\")
-$evm.log(\"info\", \"XYZ go object: #{load_balancer.inspect}\")
+$evm.log(\"info\", \"XYZ go object: \#{load_balancer.inspect}\")
 service = $evm.vmdb(:service).first
 load_balancer.services = [service]
 content_type = \"message\"
 load_balancer.save!
-$evm.log(\"info\", \"XYZ load balancer got service: #{load_balancer.services.first.inspect}\")
+$evm.log(\"info\", \"XYZ load balancer got service: \#{load_balancer.services.first.inspect}\")
 exit MIQ_OK"
   appliance.context.use(ViaUI) {
     klass.schema.add_fields({"name" => schema_field, "type" => "Method", "data_type" => "String"})
@@ -424,7 +424,7 @@ end
 def test_automate_user_has_groups(request, appliance, custom_instance)
   # 
   #   This method should work:  groups = $evm.vmdb(:user).first.miq_groups
-  #   $evm.log(:info, \"Displaying the user\"s groups: #{groups.inspect}\")
+  #   $evm.log(:info, \"Displaying the user\"s groups: \#{groups.inspect}\")
   # 
   #   Bugzilla:
   #       1411424
@@ -440,7 +440,7 @@ def test_automate_user_has_groups(request, appliance, custom_instance)
   user,user_data = _users(request, appliance)
   script = dedent("
         group = $evm.vmdb(:user).find_by_name(\"#{user[0].name}\").miq_groups
-        $evm.log(:info, \"Displaying the user\'s groups: #{group.inspect}\")
+        $evm.log(:info, \"Displaying the user\'s groups: \#{group.inspect}\")
         ")
   instance = custom_instance.(ruby_code: script)
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*#{user_data[0]["group"]["description"]}.*"])).waiting(timeout: 120) {

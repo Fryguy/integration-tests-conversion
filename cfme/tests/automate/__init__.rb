@@ -22,11 +22,11 @@ module Demo
               user2 = {:id => 2, :name => \'Barney\', :age => 55, :email => \"barney@bedrock.com\" }
               user3 = {:id => 3, :name => \'Wilma\', :age => 39, :email => \"wilma@berdock.com\" }
               user4 = {:id => 4, :name => \'Betty\', :age => 38, :email => \"betty@bedrock.com\" }
-              user_list = { user1 => \"#{user1[:name]} - ID #{user1[:id]}\",
-                            user2 => \"#{user2[:name]} - ID #{user2[:id]}\",
-                            user3 => \"#{user3[:name]} - ID #{user3[:id]}\",
-                            user4 => \"#{user4[:name]} - ID #{user4[:id]}\"}
-              @handle.log(:info, \"User List #{user_list}\")
+              user_list = { user1 => \"\#{user1[:name]} - ID \#{user1[:id]}\",
+                            user2 => \"\#{user2[:name]} - ID \#{user2[:id]}\",
+                            user3 => \"\#{user3[:name]} - ID \#{user3[:id]}\",
+                            user4 => \"\#{user4[:name]} - ID \#{user4[:id]}\"}
+              @handle.log(:info, \"User List \#{user_list}\")
               return nil => \"<none>\" if user_list.blank?
 
               user_list[nil] = \"<select>\" if user_list.length > 1

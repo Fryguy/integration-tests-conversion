@@ -179,7 +179,7 @@ def automate_flavor_method(appliance, klass, namespace)
 
                 $evm.log(\"info\", \"Listing Root Object Attributes:\")
 
-                $evm.root.attributes.sort.each { |k, v| $evm.log(\"info\", \"\t#{k}: #{v}\") }
+                $evm.root.attributes.sort.each { |k, v| $evm.log(\"info\", \"\t\#{k}: \#{v}\") }
 
                 $evm.log(\"info\", \"===========================================\")
 
@@ -209,8 +209,8 @@ def automate_flavor_method(appliance, klass, namespace)
 
                 rescue => err
 
-                  $evm.log(:error, \"[#{err}]
-#{err.backtrace.join(\"
+                  $evm.log(:error, \"[\#{err}]
+\#{err.backtrace.join(\"
 \")}\")
 
                   exit MIQ_STOP
