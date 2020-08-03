@@ -1,0 +1,189 @@
+require_relative 'cfme'
+include Cfme
+require_relative 'cfme/automate/dialog_import_export'
+include Cfme::Automate::Dialog_import_export
+require_relative 'cfme/fixtures/automate'
+include Cfme::Fixtures::Automate
+require_relative 'cfme/utils/appliance/implementations/ui'
+include Cfme::Utils::Appliance::Implementations::Ui
+require_relative 'cfme/utils/blockers'
+include Cfme::Utils::Blockers
+require_relative 'cfme/utils/conf'
+include Cfme::Utils::Conf
+require_relative 'cfme/utils/ftp'
+include Cfme::Utils::Ftp
+require_relative 'cfme/utils/log_validator'
+include Cfme::Utils::Log_validator
+require_relative 'cfme/utils/update'
+include Cfme::Utils::Update
+pytestmark = [test_requirements.automate, pytest.mark.tier(3)]
+def test_domain_import_file(import_datastore, import_data)
+  # This test case Verifies that a domain can be imported from file.
+  # 
+  #   Polarion:
+  #       assignee: dgaikwad
+  #       initialEstimate: 1/6h
+  #       caseimportance: medium
+  #       startsin: 5.7
+  #       casecomponent: Automate
+  #       tags: automate
+  #       testSteps:
+  #           1. Navigate to Automation > Automate > Import/Export
+  #           2. Upload zip datastore file
+  #           3. Select domain which like to import
+  #       expectedResults:
+  #           1.
+  #           2.
+  #           3. Import should work. Check imported or not.
+  #   
+  raise unless import_datastore.exists
+end
+def test_upload_blank_file(appliance, upload_file)
+  # 
+  #   Bugzilla:
+  #       1720611
+  # 
+  #   Polarion:
+  #       assignee: dgaikwad
+  #       initialEstimate: 1/8h
+  #       caseposneg: negative
+  #       startsin: 5.10
+  #       casecomponent: Automate
+  #       testSteps:
+  #           1. Create blank zip(test.zip) and yaml(test.yml) file
+  #           2. Navigate to Automation > Automate > Import/Export and upload test.zip file
+  #           3. Navigate to Automation > Automate > Customization > Import/Export and upload test.yml
+  #       expectedResults:
+  #           1.
+  #           2. Error message should be displayed
+  #           3. Error message should be displayed
+  #   
+  fs = FTPClientWrapper(cfme_data.ftpserver.entities.datastores)
+  file_path = fs.download(upload_file)
+  if upload_file == "dialog_blank.yml"
+    (LogValidator("/var/www/miq/vmdb/log/production.log", failure_patterns: [".*FATAL.*"])).waiting(timeout: 120) {
+      import_export = DialogImportExport(appliance)
+      view = navigate_to(import_export, "DialogImportExport")
+      view.upload_file.fill(file_path)
+      view.upload.click()
+      view.flash.assert_message("Error: the uploaded file is blank")
+    }
+  else
+    datastore = appliance.collections.automate_import_exports.instantiate(import_type: "file", file_path: file_path)
+    view = navigate_to(appliance.collections.automate_import_exports, "All")
+    (LogValidator("/var/www/miq/vmdb/log/production.log", failure_patterns: [".*FATAL.*"])).waiting(timeout: 120) {
+      view.import_file.upload_file.fill(datastore.file_path)
+      view.import_file.upload.click()
+      view.flash.assert_message("Error: import processing failed: domain: *")
+    }
+  end
+end
+def test_crud_imported_domains(import_data, temp_appliance_preconfig)
+  # 
+  #   Bugzilla:
+  #       1753586
+  # 
+  #   Polarion:
+  #       assignee: dgaikwad
+  #       initialEstimate: 1/8h
+  #       caseposneg: positive
+  #       casecomponent: Automate
+  #   
+  fs = FTPClientWrapper(cfme_data.ftpserver.entities.datastores)
+  file_path = fs.download(import_data.file_name)
+  datastore = temp_appliance_preconfig.collections.automate_import_exports.instantiate(import_type: "file", file_path: file_path)
+  domain = datastore.import_domain_from(import_data.from_domain, import_data.to_domain)
+  raise unless domain.exists
+  if import_data.file_name == "bz_1753586_system.zip"
+    view = navigate_to(domain, "Details")
+    raise unless !view.configuration.is_displayed
+  else
+    view = navigate_to(domain.parent, "All")
+    update(domain) {
+      domain.description = fauxfactory.gen_alpha()
+    }
+    domain.delete()
+    view.flash.assert_message()
+  end
+end
+def setup_automate_model(appliance)
+  # This fixture creates domain, namespace, klass
+  domain = appliance.collections.domains.create(name: "bz_1440226", description: fauxfactory.gen_alpha(), enabled: true)
+  namespace = domain.namespaces.create(name: "test_name", description: fauxfactory.gen_alpha())
+  klass = namespace.classes.create(name: "test_class", display_name: "test_class_display", description: fauxfactory.gen_alpha())
+  yield [domain, namespace, klass]
+  klass.delete_if_exists()
+  namespace.delete_if_exists()
+  domain.delete_if_exists()
+end
+def test_automate_import_attributes_updated(setup_automate_model, import_datastore, import_data)
+  # 
+  #   Note: We are not able to export automate model using automation. Hence importing same datastore
+  #   which is already uploaded on FTP. So step 1 and 2 are performed manually and uploaded that
+  #   datastore on FTP.
+  # 
+  #   Bugzilla:
+  #       1440226
+  # 
+  #   Polarion:
+  #       assignee: dgaikwad
+  #       casecomponent: Automate
+  #       caseimportance: low
+  #       initialEstimate: 1/12h
+  #       tags: automate
+  #       testSteps:
+  #           1. Export an Automate model
+  #           2. Change the description in the exported namespace, class yaml file
+  #           3. Import the updated datastore
+  #           4. Check if the description attribute gets updated
+  #   
+  domain,namespace,klass = setup_automate_model
+  view = navigate_to(namespace, "Edit")
+  raise unless view.description.read() == "test_name_desc_updated"
+  view = navigate_to(klass, "Edit")
+  raise unless view.description.read() == "test_class_desc"
+end
+def local_domain(appliance)
+  # This fixture used to create automate domain - Datastore/Domain
+  domain = appliance.collections.domains.create(name: "bz_1753860", description: fauxfactory.gen_alpha(), enabled: true)
+  yield domain
+  domain.enabled = domain.rest_api_entity.enabled
+  domain.delete_if_exists()
+end
+def test_overwrite_import_domain(local_domain, appliance, file_name)
+  # 
+  #   Note: This PR automates this scenario via rake commands. But this RFE is not yet fixed as it has
+  #   bug to apply this scenario via UI.
+  # 
+  #   Bugzilla:
+  #       1753860
+  # 
+  #   Polarion:
+  #       assignee: dgaikwad
+  #       initialEstimate: 1/8h
+  #       caseposneg: positive
+  #       casecomponent: Automate
+  #       setup:
+  #           1. Create custom domain, namespace, class, instance, method. Do not delete this domain.
+  #           2. Navigate to automation > automate > import/export and export all classes and
+  #              instances to a file
+  #           3. Extract the file and update __domain__.yaml file of custom domain as below:
+  #              >> description: test_desc
+  #              >> enabled: false
+  #              Note: These steps needs to perform manually
+  #       testSteps:
+  #           1. Compress this domain file and import it via UI.
+  #       expectedResults:
+  #           1. Description and enabled status of existing domain should update.
+  #   
+  datastore_file = FTPClientWrapper(cfme_data.ftpserver.entities.datastores).get_file(file_name)
+  file_path = File.join("/tmp",datastore_file.name)
+  raise unless appliance.ssh_client.run_command().success
+  rake_cmd = ["false", "true"].map{|enable|[enable, ]}.to_h
+  for (status, cmd) in rake_cmd.to_a()
+    appliance.ssh_client.run_rake_command(cmd)
+    view = navigate_to(local_domain.parent, "All")
+    view.browser.refresh()
+    raise unless view.domains.row(name__contains: local_domain.name)["Enabled"].text == status
+  end
+end
