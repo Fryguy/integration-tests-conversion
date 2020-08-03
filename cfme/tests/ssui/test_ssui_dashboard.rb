@@ -35,9 +35,9 @@ def new_compute_rate(appliance, enable_candu)
     compute = appliance.collections.compute_rates.create(description: desc, fields: {"Used CPU" => {"per_time" => "Hourly", "variable_rate" => "3"}, "Allocated CPU Count" => {"per_time" => "Hourly", "fixed_rate" => "2"}, "Used Disk I/O" => {"per_time" => "Hourly", "variable_rate" => "2"}, "Allocated Memory" => {"per_time" => "Hourly", "fixed_rate" => "1"}, "Used Memory" => {"per_time" => "Hourly", "variable_rate" => "2"}})
     storage = appliance.collections.storage_rates.create(description: desc, fields: {"Used Disk Storage" => {"per_time" => "Hourly", "variable_rate" => "3"}, "Allocated Disk Storage" => {"per_time" => "Hourly", "fixed_rate" => "3"}})
   rescue Exception => ex
-    pytest.fail()
+    pytest.fail("Exception during chargeback creation for test setup: #{ex.message}")
   end
-  yield desc
+  yield(desc)
   for rate in [compute, storage]
     rate.delete_if_exists()
   end
@@ -84,7 +84,7 @@ def run_service_chargeback_report(provider, appliance, assign_chargeback_rate, o
     wait_for(method(:verify_records_rollups_table), [appliance, provider], timeout: 3600, delay: 10, message: "Waiting for hourly rollups")
   end
   result = appliance.ssh_client.run_rails_command("Service.queue_chargeback_reports")
-  raise  unless result.success
+  raise "Failed to run Service Chargeback report" unless result.success
 end
 def test_total_services(appliance, setup_provider, context, order_service)
   # Tests total services count displayed on dashboard.
@@ -153,7 +153,7 @@ def test_monthly_charges(appliance, has_no_providers_modscope, setup_provider, c
   appliance.context.use(context) {
     dashboard = Dashboard(appliance)
     monthly_charges = dashboard.monthly_charges()
-    logger.info()
+    logger.info("Monthly charges is #{monthly_charges}")
     raise unless monthly_charges != "$0"
   }
 end
@@ -168,7 +168,7 @@ def test_service_chargeback_multiple_vms(appliance, has_no_providers_modscope, s
   appliance.context.use(context) {
     dashboard = Dashboard(appliance)
     monthly_charges = dashboard.monthly_charges()
-    logger.info()
+    logger.info("Monthly charges is #{monthly_charges}")
     raise unless monthly_charges != "$0"
   }
 end

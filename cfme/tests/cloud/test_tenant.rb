@@ -14,7 +14,7 @@ pytestmark = [pytest.mark.provider([OpenStackProvider], scope: "module")]
 TENANTS = [fauxfactory.gen_alphanumeric(start: "parent_"), fauxfactory.gen_alphanumeric(start: "child_")]
 def tenant(provider, setup_provider, appliance)
   tenant = appliance.collections.cloud_tenants.create(name: fauxfactory.gen_alphanumeric(start: "tenant_"), provider: provider)
-  yield tenant
+  yield(tenant)
   begin
     if is_bool(tenant.exists)
       tenant.delete()
@@ -48,13 +48,13 @@ def new_tenant(appliance)
   # This fixture creates new tenant under root tenant(My Company)
   collection = appliance.collections.tenants
   tenant = collection.create(name: TENANTS[0], description: fauxfactory.gen_alphanumeric(15, start: "tenant_desc_"), parent: collection.get_root_tenant())
-  yield tenant
+  yield(tenant)
   tenant.delete_if_exists()
 end
 def child_tenant(new_tenant)
   # This fixture used to create child tenant under parent tenant - new_tenant
   child_tenant = new_tenant.appliance.collections.tenants.create(name: TENANTS[1], description: fauxfactory.gen_alphanumeric(15, start: "tenant_desc_"), parent: new_tenant)
-  yield child_tenant
+  yield(child_tenant)
   child_tenant.delete_if_exists()
 end
 def check_permissions(appliance, assigned_tenant)
@@ -119,7 +119,7 @@ def test_dynamic_product_feature_for_tenant_quota(request, appliance, new_tenant
   product_feature = ["Everything"]
   product_feature.concat((appliance.version < "5.11") ? ["Settings", "Configuration"] : ["Main Configuration"])
   product_feature.concat(["Access Control", "Tenants", "Modify", "Manage Quotas"])
-  tenant_ = [, ("My Company/{parent}/{child}").format(parent: new_tenant.name, child: child_tenant.name)]
+  tenant_ = ["My Company/#{new_tenant.name}", ("My Company/{parent}/{child}").format(parent: new_tenant.name, child: child_tenant.name)]
   role = appliance.collections.roles.instantiate(name: "EvmRole-tenant_administrator")
   for i in 2.times
     new_role = role.copy(name: "{name}_{role}".format(name: role.name, role: fauxfactory.gen_alphanumeric()))

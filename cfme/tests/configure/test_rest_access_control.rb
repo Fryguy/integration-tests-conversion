@@ -473,7 +473,7 @@ class TestUsersViaREST
     #         initialEstimate: 1/4h
     #     
     uniq = fauxfactory.gen_alphanumeric(4).upcase()
-    data = {"userid" => , "name" => , "password" => fauxfactory.gen_alphanumeric(), "email" => "user@example.com", "group" => "EvmGroup-user_self_service"}
+    data = {"userid" => "rest_#{uniq}", "name" => "REST User #{uniq}", "password" => fauxfactory.gen_alphanumeric(), "email" => "user@example.com", "group" => "EvmGroup-user_self_service"}
     user,_ = _users(request, appliance, None: data)
     assert_response(appliance)
     user_auth = [user[0].userid, data["password"]]
@@ -783,13 +783,13 @@ def create_role(appliance, request)
     product_features = [[["Everything"], true]]
   end
   role = appliance.collections.roles.create(name: fauxfactory.gen_alpha(15, start: "API-role-"), product_features: [[["Everything"], false]] + product_features)
-  yield appliance.rest_api.collections.roles.get(name: role.name)
+  yield(appliance.rest_api.collections.roles.get(name: role.name))
   role.delete_if_exists()
 end
 def role_api(appliance, request, create_role)
   group = _groups(request, appliance, create_role)
   user,user_data = _users(request, appliance, group: group.description)
-  yield appliance.new_rest_api_instance(entry_point: appliance.rest_api._entry_point, auth: [user[0].userid, user_data[0]["password"]])
+  yield(appliance.new_rest_api_instance(entry_point: appliance.rest_api._entry_point, auth: [user[0].userid, user_data[0]["password"]]))
 end
 def test_create_picture_with_role(role_api)
   # 

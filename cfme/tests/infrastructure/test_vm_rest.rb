@@ -67,7 +67,7 @@ def test_vm_scan(appliance, vm, from_detail)
   _finished = lambda do
     response.task.reload()
     if response.task.status.downcase().include?("error")
-      pytest.fail()
+      pytest.fail("Error when running scan vm method: `#{response.task.message}`")
     end
     return response.task.state.downcase() == "finished"
   end

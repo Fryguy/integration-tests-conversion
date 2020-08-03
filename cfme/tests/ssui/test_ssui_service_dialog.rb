@@ -14,20 +14,20 @@ def tagcontrol_dialog(appliance)
   tab = sd.tabs.create(tab_label: fauxfactory.gen_alphanumeric(start: "tab_"), tab_desc: "my tab desc")
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   box.elements.create(element_data: [element_data])
-  yield sd
+  yield(sd)
   sd.delete_if_exists()
 end
 def catalog(appliance)
   catalog = fauxfactory.gen_alphanumeric(start: "cat_")
   cat = appliance.collections.catalogs.create(name: catalog, description: "my catalog")
-  yield cat
+  yield(cat)
   if is_bool(cat.exists)
     cat.delete()
   end
 end
 def catalog_item(appliance, tagcontrol_dialog, catalog)
   catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: "my catalog", display_in: true, catalog: catalog, dialog: tagcontrol_dialog)
-  yield catalog_item
+  yield(catalog_item)
   if is_bool(catalog_item.exists)
     catalog_item.delete()
   end

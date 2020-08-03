@@ -9,14 +9,14 @@ FEATURES_NOT_IN_511 = {"bottlenecks" => ["Optimize / Bottlenecks"], "chargeback"
 FEATURES_NOT_IN_510 = {"chargeback" => ["Overview / Chargeback"], "cloud_volume_type" => ["Storage / Block Storage / Volume Types"], "dashboard" => ["Overview / Dashboard"], "ems_physical_infra" => ["Compute / Physical Infrastructure / Providers"], "mappings" => ["Migration / Infrastructure Mappings"], "migration" => ["Migration / Migration Plans"], "migration_settings" => ["Migration / Migration Settings"], "miq_report" => ["Overview / Reports"], "physical_chassis" => ["Compute / Physical Infrastructure / Chassis"], "physical_infra_overview" => ["Compute / Physical Infrastructure / Overview"], "physical_infra_topology" => ["Compute / Physical Infrastructure / Topology"], "physical_rack" => ["Compute / Physical Infrastructure / Racks"], "physical_server" => ["Compute / Physical Infrastructure / Servers"], "physical_storage" => ["Compute / Physical Infrastructure / Storages"], "physical_switch" => ["Compute / Physical Infrastructure / Switches"], "utilization" => ["Overview / Utilization"]}
 FEATURES_IN_511 = { => COMMON_FEATURES,  => FEATURES_NOT_IN_510}
 FEATURES_IN_510 = { => COMMON_FEATURES,  => FEATURES_NOT_IN_511}
-ALL_FEATURES_LST = 
+ALL_FEATURES_LST = Set.new([*FEATURES_IN_510, *FEATURES_IN_511])
 DIFFERENT_VALUE_LST = ["chargeback", "dashboard", "miq_report", "utilization"]
 def setup_user(appliance, feature)
   uid = fauxfactory.gen_alpha(length: 4)
-  role = appliance.rest_api.collections.roles.action.create({"name" => , "settings" => {"restrictions" => {"vms" => "user"}}, "features" => [{"identifier" => feature}, {"identifier" => "my_settings"}]})[0]
-  group = appliance.rest_api.collections.groups.action.create({"description" => , "role" => {"id" => role.id}, "tenant" => {"href" => appliance.rest_api.collections.tenants.all[0].href}})[0]
-  user = appliance.rest_api.collections.users.action.create({"userid" => , "password" => "smartvm", "name" => , "group" => {"id" => group.id}})[0]
-  yield appliance.collections.users.instantiate(name: user.name, credential: Credential(user.userid, "smartvm"))
+  role = appliance.rest_api.collections.roles.action.create({"name" => "test_role_#{uid}", "settings" => {"restrictions" => {"vms" => "user"}}, "features" => [{"identifier" => feature}, {"identifier" => "my_settings"}]})[0]
+  group = appliance.rest_api.collections.groups.action.create({"description" => "test_group_#{uid}", "role" => {"id" => role.id}, "tenant" => {"href" => appliance.rest_api.collections.tenants.all[0].href}})[0]
+  user = appliance.rest_api.collections.users.action.create({"userid" => "test_user_#{uid}", "password" => "smartvm", "name" => "#{group.description} User", "group" => {"id" => group.id}})[0]
+  yield(appliance.collections.users.instantiate(name: user.name, credential: Credential(user.userid, "smartvm")))
   user.action.delete()
   group.action.delete()
   role.action.delete()

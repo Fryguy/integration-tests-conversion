@@ -43,7 +43,7 @@ def get_provision_data(rest_api, provider, template_name, auto_approve: true)
     end
   end
   if __dummy0__
-    raise Exception, 
+    raise Exception, "No such template #{template_name} on provider!"
   end
   result = {"version" => "1.1", "template_fields" => {"guid" => guid}, "vm_fields" => {"number_of_cpus" => 1, "vm_name" => fauxfactory.gen_alphanumeric(20, start: "test_rest_prov_"), "vm_memory" => "2048", "vlan" => provider.data["provisioning"]["vlan"]}, "requester" => {"user_name" => "admin", "owner_first_name" => "John", "owner_last_name" => "Doe", "owner_email" => "jdoe@sample.com", "auto_approve" => auto_approve}, "tags" => {"network_location" => "Internal", "cc" => "001"}, "additional_values" => {"request_id" => "1001"}, "ems_custom_attributes" => {}, "miq_custom_attributes" => {}}
   if is_bool(provider.one_of(RHEVMProvider))
@@ -86,7 +86,7 @@ def test_provisioning(appliance, request, scenario)
     quantifiers["Leftover_VMs"] = vms_to_cleanup
     add_workload_quantifiers(quantifiers, scenario_data)
     timediff = time.time() - starttime
-    logger.info()
+    logger.info("Finished cleaning up monitoring thread in #{timediff}")
   end
   request.addfinalizer(lambda{|| cleanup_workload.call(scenario, from_ts, vm_name, quantifiers, scenario_data)})
   monitor_thread.start()
@@ -126,7 +126,7 @@ def test_provisioning(appliance, request, scenario)
     _finished = lambda do
       provision_request.reload()
       if provision_request.status.downcase().include?("error")
-        pytest.fail()
+        pytest.fail("Error when provisioning: `#{provision_request.message}`")
       end
       return ["finished", "provisioned"].include?(provision_request.request_state.downcase())
     end
@@ -134,8 +134,8 @@ def test_provisioning(appliance, request, scenario)
     vm = appliance.rest_api.collections.vms.get(name: vm_name)
     creation_time = time.time()
     provision_time = round(creation_time - start_iteration_time, 2)
-    logger.debug()
-    logger.info()
+    logger.debug("Time to initiate provisioning: #{provision_time}")
+    logger.info("#{total_provisioned_vms} VMs provisioned so far")
     if provisioned_vms > cleanup_size * scenario["providers"].size
       start_remove_time = time.time()
       if is_bool(appliance.rest_api.collections.vms.action.delete(vm))
@@ -144,13 +144,13 @@ def test_provisioning(appliance, request, scenario)
         total_deleted_vms += 1
       end
       deletion_time = round(time.time() - start_remove_time, 2)
-      logger.debug()
-      logger.info()
+      logger.debug("Time to initate deleting: #{deletion_time}")
+      logger.info("#{total_deleted_vms} VMs deleted so far")
     end
     end_iteration_time = time.time()
     iteration_time = round(end_iteration_time - start_iteration_time, 2)
     elapsed_time = end_iteration_time - starttime
-    logger.debug()
+    logger.debug("Time to initiate provisioning and deletion: #{iteration_time}")
     logger.info(("Time elapsed: {}/{}").format(round(elapsed_time, 2), total_time))
     if iteration_time < time_between_provision
       wait_diff = time_between_provision - iteration_time

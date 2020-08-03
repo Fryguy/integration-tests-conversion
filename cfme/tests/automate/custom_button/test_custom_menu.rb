@@ -64,6 +64,6 @@ def test_custom_menu_display(appliance, request)
   for menu in ["RedHat", "ManageIQ"]
     view.navigation.select(menu)
     raise unless view.navigation.currently_selected == [menu]
-    raise unless view.browser.selenium.current_url.include?()
+    raise unless view.browser.selenium.current_url.include?("id=#{menu.downcase()}")
   end
 end

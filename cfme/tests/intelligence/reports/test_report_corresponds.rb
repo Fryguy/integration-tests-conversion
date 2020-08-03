@@ -9,7 +9,7 @@ pytestmark = [test_requirements.report]
 def report_vms(appliance, infra_provider)
   report = appliance.collections.reports.create(menu_name: fauxfactory.gen_alphanumeric(), title: fauxfactory.gen_alphanumeric(), base_report_on: "Virtual Machines", report_fields: ["Provider : Name", "Cluster / Deployment Role : Name", "Datastore : Name", "Hardware : Number of CPUs", "Hardware : RAM", "Host / Node : Name", "Name"])
   report.queue(wait_for_finish: true)
-  yield sample(report.saved_reports.all()[0].data.rows.to_a.select{|i| i["Provider Name"].strip().size > 0}.map{|i| i}, 2)
+  yield(sample(report.saved_reports.all()[0].data.rows.to_a.select{|i| i["Provider Name"].strip().size > 0}.map{|i| i}, 2))
   report.delete()
 end
 def test_custom_vm_report(soft_assert, report_vms)
@@ -48,7 +48,7 @@ def test_custom_vm_report(soft_assert, report_vms)
           end
         end
       end
-      soft_assert.(found, )
+      soft_assert.(found, "Host #{possible_ips_or_hosts} not found in #{provider_hosts_and_ips}!")
     end
   end
 end

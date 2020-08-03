@@ -51,7 +51,7 @@ def host_with_credentials(provider, host_name)
     pytest.skip("Multiple hosts with the same name found, only expecting one")
   end
   host.update_credentials_rest(credentials: host_data["credentials"])
-  yield host
+  yield(host)
   host.update_credentials_rest(credentials: {"default" => Host.Credential(principal: "", secret: "")})
 end
 def test_run_host_analysis(setup_provider_modscope, provider, host_type, host_name, register_event, soft_assert, host_with_credentials)

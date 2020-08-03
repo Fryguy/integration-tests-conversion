@@ -20,12 +20,12 @@ pytestmark = [pytest.mark.long_running, pytest.mark.provider([VMwareProvider], s
 def ansible_action(appliance, ansible_catalog_item)
   action_collection = appliance.collections.actions
   action = action_collection.create(fauxfactory.gen_alphanumeric(15, start: "action_"), action_type: "Run Ansible Playbook", action_values: {"run_ansible_playbook" => {"playbook_catalog_item" => ansible_catalog_item.name}})
-  yield action
+  yield(action)
   action.delete_if_exists()
 end
 def policy_for_testing(appliance, create_vm_modscope, provider, ansible_action)
   vm = create_vm_modscope
-  policy = appliance.collections.policies.create(VMControlPolicy, fauxfactory.gen_alpha(15, start: "policy_"), scope: )
+  policy = appliance.collections.policies.create(VMControlPolicy, fauxfactory.gen_alpha(15, start: "policy_"), scope: "fill_field(VM and Instance : Name, INCLUDES, #{vm.name})")
   policy.assign_actions_to_event("Tag Complete", [ansible_action.description])
   policy_profile = appliance.collections.policy_profiles.create(fauxfactory.gen_alpha(15, start: "profile_"), policies: [policy])
   provider.assign_policy_profiles(policy_profile.description)
@@ -39,7 +39,7 @@ def policy_for_testing(appliance, create_vm_modscope, provider, ansible_action)
 end
 def ansible_credential(wait_for_ansible, appliance, full_template_modscope)
   credential = appliance.collections.ansible_credentials.create(fauxfactory.gen_alpha(start: "cred_"), "Machine", username: credentials[full_template_modscope.creds]["username"], password: credentials[full_template_modscope.creds]["password"])
-  yield credential
+  yield(credential)
   credential.delete_if_exists()
 end
 def test_action_run_ansible_playbook_localhost(request, ansible_catalog_item, ansible_action, policy_for_testing, create_vm_modscope, ansible_credential, ansible_service_request_funcscope, ansible_service_funcscope, appliance)

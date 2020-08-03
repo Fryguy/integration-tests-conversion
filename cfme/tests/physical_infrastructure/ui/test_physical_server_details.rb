@@ -5,7 +5,7 @@ include Cfme::Utils::Appliance::Implementations::Ui
 pytestmark = [pytest.mark.tier(3), pytest.mark.provider([LenovoProvider], scope: "module")]
 def physical_server(appliance, provider, setup_provider_modscope)
   physical_servers = appliance.collections.physical_servers.all(provider)
-  yield physical_servers[0]
+  yield(physical_servers[0])
 end
 def test_physical_server_details(physical_server)
   # Navigate to the physical server details page and verify that the page is displayed

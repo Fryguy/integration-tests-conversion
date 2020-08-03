@@ -15,14 +15,14 @@ def authentications(appliance, provider)
   # Creates and returns authentication resources under /api/authentications.
   auth_num = 2
   collection = appliance.rest_api.collections.authentications
-  prov = appliance.rest_api.collections.providers.get(name: )
+  prov = appliance.rest_api.collections.providers.get(name: "#{provider.name} %")
   data = []
   cred_names = []
   for __ in auth_num.times
     uniq = fauxfactory.gen_alphanumeric(5)
-    cred_name = 
+    cred_name = "test_credentials_#{uniq}"
     cred_names.push(cred_name)
-    data.push({"description" => , "name" => cred_name, "related" => {}, "user" => 1, "userid" => "foo", "password" => "bar", "host" => "baz", "type" => "ManageIQ::Providers::AnsibleTower::AutomationManager::VmwareCredential", "manager_resource" => {"href" => prov.href}})
+    data.push({"description" => "Test Description #{uniq}", "name" => cred_name, "related" => {}, "user" => 1, "userid" => "foo", "password" => "bar", "host" => "baz", "type" => "ManageIQ::Providers::AnsibleTower::AutomationManager::VmwareCredential", "manager_resource" => {"href" => prov.href}})
   end
   collection.action.create(*data)
   assert_response(appliance)
@@ -32,7 +32,7 @@ def authentications(appliance, provider)
     auths.push(search[0])
   end
   raise unless auths.size == auth_num
-  yield auths
+  yield(auths)
   collection.reload()
   ids = auths.map{|e| e.id}
   delete_entities = collection.select{|e| ids.include?(e.id)}.map{|e| e}
@@ -199,7 +199,7 @@ def config_manager_rest(provider)
   assert_response(provider.appliance)
   rest_entity = provider.rest_api_entity
   rest_entity.reload()
-  yield rest_entity
+  yield(rest_entity)
   if is_bool(rest_entity.exists)
     rest_entity.action.delete()
     rest_entity.wait_not_exists()

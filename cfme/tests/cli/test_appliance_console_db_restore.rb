@@ -154,15 +154,15 @@ def get_ha_appliances_with_providers(unconfigured_appliances, app_creds)
   return unconfigured_appliances
 end
 def fetch_v2key(appl1, appl2)
-  rand_v2_filename = 
-  rand_yml_filename = 
+  rand_v2_filename = "/tmp/v2_key_#{fauxfactory.gen_alphanumeric()}"
+  rand_yml_filename = "/tmp/database_yml_#{fauxfactory.gen_alphanumeric()}"
   appl1.ssh_client.get_file("/var/www/miq/vmdb/certs/v2_key", rand_v2_filename)
   appl2.ssh_client.put_file(rand_v2_filename, "/var/www/miq/vmdb/certs/v2_key")
   appl1.ssh_client.get_file("/var/www/miq/vmdb/config/database.yml", rand_yml_filename)
   appl2.ssh_client.put_file(rand_yml_filename, "/var/www/miq/vmdb/config/database.yml")
 end
 def fetch_db_local(appl1, appl2, file_name)
-  dump_filename = 
+  dump_filename = "/tmp/db_dump_#{fauxfactory.gen_alphanumeric()}"
   appl1.ssh_client.get_file(file_name, dump_filename)
   appl2.ssh_client.put_file(dump_filename, file_name)
 end
@@ -222,7 +222,7 @@ def test_appliance_console_backup_restore_db_local(request, two_appliances_one_w
   #   
   appl1,appl2 = two_appliances_one_with_providers
   appl1_provider_names = Set.new(appl1.managed_provider_names)
-  backup_file_name = 
+  backup_file_name = "/tmp/backup.#{fauxfactory.gen_alphanumeric()}.dump"
   appl1.db.backup(backup_file_name)
   fetch_v2key(appl1, appl2)
   fetch_db_local(appl1, appl2, backup_file_name)
@@ -442,9 +442,9 @@ def test_appliance_console_restore_db_nfs(request, two_appliances_one_with_provi
   vm,_,data = utility_vm
   host = utility_vm_nfs_ip
   loc = data["network_share"]["nfs"]["path"]
-  nfs_dump_file_name = 
-  nfs_restore_dir_path = 
-  nfs_restore_file_path = 
+  nfs_dump_file_name = "/tmp/backup.#{fauxfactory.gen_alphanumeric()}.dump"
+  nfs_restore_dir_path = "nfs://#{host}#{loc}"
+  nfs_restore_file_path = "#{nfs_restore_dir_path}/db_backup/#{nfs_dump_file_name}"
   fetch_v2key(appl1, appl2)
   appl1_provider_names = Set.new(appl1.managed_provider_names)
   SSHExpect(appl1) {|interaction|
@@ -491,9 +491,9 @@ def test_appliance_console_restore_db_samba(request, two_appliances_one_with_pro
   _,_,data = utility_vm
   host = utility_vm_samba_ip
   loc = data["network_share"]["smb"]["path"]
-  smb_dump_file_name = 
-  smb_restore_dir_path = 
-  smb_restore_file_path = 
+  smb_dump_file_name = "/tmp/backup.#{fauxfactory.gen_alphanumeric()}.dump"
+  smb_restore_dir_path = "smb://#{host}#{loc}"
+  smb_restore_file_path = "#{smb_restore_dir_path}/db_backup/#{smb_dump_file_name}"
   creds_key = data["network_share"]["smb"]["credentials"]
   pwd = credentials[creds_key]["password"]
   usr = credentials[creds_key]["username"]
@@ -508,7 +508,7 @@ def test_appliance_console_restore_db_samba(request, two_appliances_one_with_pro
     interaction.answer("Enter the location to save the backup file to: \\|.*\\| ", smb_dump_file_name)
     interaction.answer(re.escape("Example: smb://host.mydomain.com/my_share/daily_backup/db.backup: "), smb_restore_dir_path)
     interaction.answer(re.escape("Example: 'mydomain.com/user': "), usr)
-    interaction.answer(re.escape(), pwd)
+    interaction.answer(re.escape("Enter the password for #{usr}: "), pwd)
     interaction.answer("Press any key to continue.", "", timeout: 120)
   }
   appl2.evmserverd.stop()
@@ -521,7 +521,7 @@ def test_appliance_console_restore_db_samba(request, two_appliances_one_with_pro
     interaction.answer("Choose the restore database file source: \\|1\\| ", "3")
     interaction.answer(re.escape("Example: smb://host.mydomain.com/my_share/daily_backup/db.backup: "), smb_restore_file_path)
     interaction.answer(re.escape("Example: 'mydomain.com/user': "), usr)
-    interaction.answer(re.escape(), pwd)
+    interaction.answer(re.escape("Enter the password for #{usr}: "), pwd)
     interaction.answer("Are you sure you would like to restore the database\\? \\(Y\\/N\\): ", "y")
     interaction.answer("Press any key to continue.", "", timeout: 80)
   }

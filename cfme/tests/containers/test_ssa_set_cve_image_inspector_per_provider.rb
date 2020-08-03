@@ -26,7 +26,7 @@ def openscap_assigned_rand_image(provider, random_image_instance)
   #   teardown remove this assignment from image view.
   #   
   random_image_instance.assign_policy_profiles("OpenSCAP profile")
-  yield random_image_instance
+  yield(random_image_instance)
   random_image_instance.unassign_policy_profiles("OpenSCAP profile")
 end
 def set_cve_location(appliance, provider, soft_assert)
@@ -38,9 +38,9 @@ def set_cve_location(appliance, provider, soft_assert)
     begin
       provider_edit_view.save.click()
       view = appliance.browser.create_view(ContainerProvidersView)
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("Containers Provider \"#{provider.name}\" was saved")
     rescue RuntimeError
-      soft_assert.(false, )
+      soft_assert.(false, "#{provider.name} wasn't added successfully")
     end
   else
     provider_edit_view.cancel.click()
@@ -62,9 +62,9 @@ def set_image_inspector_registry(appliance, provider, soft_assert)
     begin
       provider_edit_view.save.click()
       view = appliance.browser.create_view(ContainerProvidersView)
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("Containers Provider \"#{provider.name}\" was saved")
     rescue RuntimeError
-      soft_assert.(false, )
+      soft_assert.(false, "#{provider.name} wasn't added successfully")
     end
   else
     provider_edit_view.cancel.click()
@@ -96,7 +96,7 @@ def verify_ssa_image_attributes(provider, soft_assert, rand_image)
       next
     end
     provider.refresh_provider_relationships()
-    wait_for_retval = wait_for(method(:get_table_attr), func_args: [rand_image, tbl, attr], message: , delay: 5, num_sec: 120, silent_failure: true)
+    wait_for_retval = wait_for(method(:get_table_attr), func_args: [rand_image, tbl, attr], message: "Trying to get attribute \"#{attr}\" of table \"#{tbl}\"", delay: 5, num_sec: 120, silent_failure: true)
     if is_bool(!wait_for_retval)
       soft_assert.(false, "Could not get attribute \"{}\" for \"{}\" table.".format(attr, tbl))
       next

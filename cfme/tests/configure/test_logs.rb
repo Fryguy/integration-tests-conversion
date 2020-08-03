@@ -49,7 +49,7 @@ def test_provider_log_rotate(appliance, provider, log_exists)
   #       initialEstimate: 1/4h
   #       casecomponent: Configuration
   #   
-  raise  unless log_exists
+  raise "Log file #{provider.log_name}.log doesn't exist" unless log_exists
   appliance.ssh_client.run_command("logrotate -f /etc/logrotate.d/miq_logs.conf")
   logs_count = (((appliance.ssh_client.run_command(("ls -l /var/www/miq/vmdb/log/{}.log*|wc -l").format(provider.log_name))).output).rstrip()).to_i
   raise "{}.log wasn't rotated by default miq_logs.conf".format(provider.log_name) unless logs_count > 1
@@ -72,7 +72,7 @@ def test_provider_log_updated(appliance, provider, log_exists)
   #       initialEstimate: 1/4h
   #       casecomponent: Configuration
   #   
-  raise  unless log_exists
+  raise "Log file #{provider.log_name}.log doesn't exist" unless log_exists
   log_before = (appliance.ssh_client.run_command(("md5sum /var/www/miq/vmdb/log/{}.log | awk '{{ print $1 }}'").format(provider.log_name))).output
   wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
   log_after = (appliance.ssh_client.run_command(("md5sum /var/www/miq/vmdb/log/{}.log | awk '{{ print $1 }}'").format(provider.log_name))).output
@@ -102,15 +102,15 @@ def test_provider_log_level(appliance, provider, log_exists)
   #           6. Check there are no info messages in the log
   #           7. Reset log level back
   #   
-  raise  unless log_exists
-  log_level = appliance.server.advanced_settings["log"][]
-  log = 
-  wait_for(lambda{|| appliance.server.update_advanced_settings({"log" => { => "info"}})}, timeout: 300)
+  raise "Log file #{provider.log_name}.log doesn't exist" unless log_exists
+  log_level = appliance.server.advanced_settings["log"]["level_#{provider.log_name}"]
+  log = "/var/www/miq/vmdb/log/#{provider.log_name}.log"
+  wait_for(lambda{|| appliance.server.update_advanced_settings({"log" => {"level_#{provider.log_name}" => "info"}})}, timeout: 300)
   lv_info = LogValidator(log, matched_patterns: [".*INFO.*"], failure_patterns: [".*DEBUG.*"])
   lv_info.start_monitoring()
   provider.refresh_provider_relationships(wait: 600)
   raise unless lv_info.validate(wait: "60s")
-  wait_for(lambda{|| appliance.server.update_advanced_settings({"log" => { => "warn"}})}, timeout: 300)
+  wait_for(lambda{|| appliance.server.update_advanced_settings({"log" => {"level_#{provider.log_name}" => "warn"}})}, timeout: 300)
   lv = LogValidator(log, failure_patterns: [".*INFO.*"])
   _no_info = lambda do
     lv.start_monitoring()
@@ -122,5 +122,5 @@ def test_provider_log_level(appliance, provider, log_exists)
     end
   end
   wait_for(method(:_no_info), num_sec: 900, delay: 40, message: "no INFOs in the log")
-  appliance.server.update_advanced_settings({"log" => { => log_level}})
+  appliance.server.update_advanced_settings({"log" => {"level_#{provider.log_name}" => log_level}})
 end

@@ -43,7 +43,7 @@ def two_random_policies(appliance)
   policies = POLICIES
   policy_1 = policy_collection.create(random.choice(policies), fauxfactory.gen_alphanumeric())
   policy_2 = policy_collection.create(random.choice(policies), fauxfactory.gen_alphanumeric())
-  yield [policy_1, policy_2]
+  yield([policy_1, policy_2])
   policy_collection.delete(policy_1, policy_2)
 end
 def policy_class(request)
@@ -54,18 +54,18 @@ def alert_profile_class(request)
 end
 def policy(appliance, policy_class)
   policy_ = appliance.collections.policies.create(policy_class, fauxfactory.gen_alphanumeric())
-  yield policy_
+  yield(policy_)
   policy_.delete()
 end
 def policy_for_event_test(appliance)
   policy_ = appliance.collections.policies.create(policies.VMControlPolicy, fauxfactory.gen_alphanumeric())
-  yield policy_
+  yield(policy_)
   policy_.delete()
 end
 def condition_for_expressions(request, appliance)
   condition_class = request.param
   condition = appliance.collections.conditions.create(condition_class, fauxfactory.gen_alphanumeric(), expression: "fill_field({} : Name, IS NOT EMPTY)".format(condition_class.FIELD_VALUE), scope: "fill_field({} : Name, INCLUDES, {})".format(condition_class.FIELD_VALUE, fauxfactory.gen_alpha()))
-  yield condition
+  yield(condition)
   condition.delete()
 end
 def condition_prerequisites(request, appliance)
@@ -79,23 +79,23 @@ def control_policy_class(request)
 end
 def control_policy(appliance, control_policy_class)
   policy = appliance.collections.policies.create(control_policy_class, fauxfactory.gen_alphanumeric())
-  yield policy
+  yield(policy)
   policy.delete()
 end
 def action(appliance)
   action_ = appliance.collections.actions.create(fauxfactory.gen_alphanumeric(), action_type: "Tag", action_values: {"tag" => ["My Company Tags", "Department", "Accounting"]})
-  yield action_
+  yield(action_)
   action_.delete()
 end
 def alert(appliance)
   alert_ = appliance.collections.alerts.create(fauxfactory.gen_alphanumeric(), based_on: random.choice(ALERT_PROFILES).TYPE, timeline_event: true, driving_event: "Hourly Timer")
-  yield alert_
+  yield(alert_)
   alert_.delete()
 end
 def alert_profile(appliance, alert_profile_class)
   alert = appliance.collections.alerts.create(fauxfactory.gen_alphanumeric(), based_on: alert_profile_class.TYPE, timeline_event: true, driving_event: "Hourly Timer")
   alert_profile_ = appliance.collections.alert_profiles.create(alert_profile_class, fauxfactory.gen_alphanumeric(), alerts: [alert.description])
-  yield alert_profile_
+  yield(alert_profile_)
   alert_profile_.delete()
   alert.delete()
 end
@@ -105,7 +105,7 @@ def policy_and_condition(request, appliance)
   expression = "fill_field({} : Name, =, {})".format(condition_class.FIELD_VALUE, fauxfactory.gen_alphanumeric())
   condition = appliance.collections.conditions.create(condition_class, fauxfactory.gen_alphanumeric(), expression: expression)
   policy = appliance.collections.policies.create(policy_class, fauxfactory.gen_alphanumeric())
-  yield [policy, condition]
+  yield([policy, condition])
   policy.delete_if_exists()
   condition.delete_if_exists()
 end
@@ -127,7 +127,7 @@ def setup_for_monitor_alerts(appliance)
   insert_str = "INSERT INTO miq_alert_statuses (id, miq_alert_id, resource_id, resource_type, result, description, ems_id) VALUES ('100', '1', '1', 'VmOrTemplate', 'f', '{}', '{}')".format(description, ems_id.to_i)
   delete_str += " WHERE id='100'"
   appliance.db.client.engine.execute(insert_str)
-  yield description
+  yield(description)
   logger.info("Deleting fired alert from appliance DB.")
   appliance.db.client.engine.execute(delete_str)
 end
@@ -219,7 +219,7 @@ def test_control_assign_actions_to_event(request, policy_class, policy, action)
     if is_bool(policy.TREE_NODE == "Physical Infrastructure" && BZ(1700070).blocks)
       prefix = policy.PRETTY
     end
-    event = 
+    event = "#{prefix} Compliance Check"
     request.addfinalizer(lambda{|| policy.assign_actions_to_event(event, {"Mark as Non-Compliant" => false})})
   end
   policy.assign_actions_to_event(event, method(:action))

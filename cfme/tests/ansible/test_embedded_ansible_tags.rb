@@ -10,7 +10,7 @@ def credential(wait_for_ansible, appliance)
   credentials_collection = appliance.collections.ansible_credentials
   _credential = credentials_collection.create(fauxfactory.gen_alpha(18, start: "Machine_Cred_"), "Machine", username: fauxfactory.gen_alpha(start: "usr_"), password: fauxfactory.gen_alpha(start: "pwd_"))
   wait_for(func: lambda{|| _credential.exists}, message: "credential appears on UI", fail_func: appliance.browser.widgetastic.refresh, delay: 20, num_sec: 240)
-  yield _credential
+  yield(_credential)
   _credential.delete_if_exists()
 end
 def playbook(appliance, ansible_repository)
@@ -21,10 +21,10 @@ def check_tag_place(soft_assert)
   _check_tag_place = lambda do |item, tag_place|
     tag = item.add_tag(details: tag_place)
     tags = item.get_tags()
-    soft_assert(tags.include?(tag), )
+    soft_assert(tags.include?(tag), "#{tag.category.display_name}: #{tag.display_name} not in (#{tags})")
     item.remove_tag(tag: tag, details: tag_place)
     tags = item.get_tags()
-    soft_assert(!tags.include?(tag), )
+    soft_assert(!tags.include?(tag), "#{tag.category.display_name}: #{tag.display_name} should not be in (#{tags})")
   end
   return _check_tag_place
 end

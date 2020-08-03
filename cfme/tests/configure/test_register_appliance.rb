@@ -25,7 +25,7 @@ REG_METHODS = ["rhsm", "sat6"]
 # These tests do not check registration results in the web UI, only through SSH.
 # 
 def pytest_generate_tests(metafunc)
-  if .include?(metafunc.function)
+  if Set.new([test_rh_updates, test_rhsm_registration_check_repo_names]).include?(metafunc.function)
     return
   end
   #  Generates tests specific to RHSM or SAT6 with proxy-on or off 
@@ -101,7 +101,7 @@ def appliance_preupdate(temp_appliance_preconfig_funcscope)
   run = lambda do |c|
     raise unless appliance.ssh_client.run_command(c).success
   end
-  run.call()
+  run.call("curl -o /etc/yum.repos.d/rpmrebuild.repo #{url}")
   run.call("yum install rpmrebuild createrepo -y")
   run.call("mkdir /myrepo")
   run.call("rpmrebuild --release=99 cfme-appliance")
@@ -112,7 +112,7 @@ name=Internal repository
 baseurl=file:///myrepo/
 enabled=1
 gpgcheck=0\" > /etc/yum.repos.d/local.repo")
-  yield appliance
+  yield(appliance)
 end
 def test_rh_creds_validation(reg_method, reg_data, proxy_url, proxy_creds)
   #  Tests whether credentials are validated correctly for RHSM and SAT6
@@ -193,7 +193,7 @@ def test_rhsm_registration_check_repo_names(temp_appliance_preconfig_funcscope, 
   repos = cfme_data.redhat_updates.repos
   repo_names = VersionPicker({"5.10" => repos.post_510, "5.11" => repos.post_511}).pick(ver)
   if is_bool(!repo_names)
-    pytest.skip()
+    pytest.skip("This test is not ready for CFME series #{ver}")
   end
   temp_appliance_preconfig_funcscope {
     view = navigate_to(RedHatUpdates, "Edit")

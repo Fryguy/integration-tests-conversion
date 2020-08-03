@@ -8,11 +8,11 @@ def some_dialogs(appliance, request)
   request.addfinalizer(lambda{|| to_delete.map{|obj| obj.delete()}})
   for i in 6.times
     random_str = fauxfactory.gen_alphanumeric(16)
-    element_data = {"element_information" => {"ele_label" => , "ele_name" => format(random_str), "ele_desc" => format(random_str), "choose_type" => "Check Box"}}
+    element_data = {"element_information" => {"ele_label" => "ele_#{random_str}", "ele_name" => format(random_str), "ele_desc" => format(random_str), "choose_type" => "Check Box"}}
     service_dialogs = appliance.collections.service_dialogs
-    sd = service_dialogs.create(label: , description: "my dialog")
-    tab = sd.tabs.create(tab_label: , tab_desc: "my tab desc")
-    box = tab.boxes.create(box_label: , box_desc: "my box desc")
+    sd = service_dialogs.create(label: "test_paginator_#{random_str}", description: "my dialog")
+    tab = sd.tabs.create(tab_label: "tab_#{random_str}", tab_desc: "my tab desc")
+    box = tab.boxes.create(box_label: "box_#{random_str}", box_desc: "my box desc")
     box.elements.create(element_data: [element_data])
     to_delete.push(sd)
   end
@@ -68,5 +68,5 @@ def test_paginator_service_dialogs(some_dialogs, soft_assert, appliance)
     current_rec_end = view.paginator.max_item
     raise "Incorrect paginator value, expected {} <= {} <= {}".format(current_rec_offset, current_rec_end, current_total) unless (current_rec_offset.to_i <= current_rec_end.to_i) and (current_rec_end.to_i <= current_total.to_i)
   end
-  raise "Could not find all dialogs by clicking the paginator!" unless  <= dialogs_found
+  raise "Could not find all dialogs by clicking the paginator!" unless some_dialogs.map{|dlg| dlg.label}.to_set <= dialogs_found
 end

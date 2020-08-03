@@ -31,12 +31,12 @@ def subset_of_vms(vms)
   return sample(vms, vm_num)
 end
 def expression_for_vms_subset(subset_of_vms)
-  return subset_of_vms.map{|vm| }.join(";select_first_expression;click_or;")
+  return subset_of_vms.map{|vm| "fill_field(Virtual Machine : Name, =, #{vm})"}.join(";select_first_expression;click_or;")
 end
 def vm_view(appliance)
   view = navigate_to(appliance.collections.infra_vms, "VMsOnly")
   raise "Cannot do advanced view.entities.search here!" unless view.entities.search.is_advanced_search_possible
-  yield view
+  yield(view)
   view.entities.search.remove_search_filters()
 end
 def test_can_open_vm_advanced_search(vm_view)
@@ -61,7 +61,7 @@ def test_vm_filter_without_user_input(appliance, vm_view, vms, subset_of_vms, ex
   vm_view.flash.assert_no_error()
   vms_present = vm_view.entities.entity_names
   for vm in subset_of_vms
-    raise  unless vms_present.include?(vm)
+    raise "Could not find VM #{vm} after filtering!" unless vms_present.include?(vm)
   end
 end
 def test_vm_filter_with_user_input(appliance, vm_view, vms, subset_of_vms, expression_for_vms_subset)
@@ -78,7 +78,7 @@ def test_vm_filter_with_user_input(appliance, vm_view, vms, subset_of_vms, expre
   vm_view.flash.assert_no_error()
   vms_after = vm_view.entities.get_all().size
   raise unless vms_after < vms_before
-  raise  unless vm_view.entities.entity_names.include?(vm)
+  raise "Could not find VM #{vm} after filtering!" unless vm_view.entities.entity_names.include?(vm)
 end
 def test_vm_filter_with_user_input_and_cancellation(vm_view, vms, subset_of_vms, expression_for_vms_subset)
   # 
@@ -302,7 +302,7 @@ def test_create_filter_with_multiple_conditions(appliance, provider, request, ru
   end
   vms_after = vm_view.entities.get_all().size
   raise unless (2 <= vms_after) and (vms_after < vms_before)
-  msg = 
+  msg = "Could not find VMs #{vm1_name}, #{vm2_name} after filtering!"
   vms = vm_view.entities.entity_names
   raise msg unless vms.include?(vm1_name) && vms.include?(vm2_name)
 end

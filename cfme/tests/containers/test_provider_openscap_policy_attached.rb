@@ -24,7 +24,7 @@ def openscap_assigned_rand_image(provider, random_image_instance)
   #   
   random_image_instance.unassign_policy_profiles("OpenSCAP profile")
   provider.assign_policy_profiles("OpenSCAP profile")
-  yield random_image_instance
+  yield(random_image_instance)
   provider.unassign_policy_profiles("OpenSCAP profile")
 end
 def get_table_attr(instance, table_name, attr)
@@ -51,7 +51,7 @@ def test_check_compliance_provider_policy(provider, soft_assert, delete_all_cont
       next
     end
     provider.refresh_provider_relationships()
-    wait_for_retval = wait_for(method(:get_table_attr), func_args: [openscap_assigned_rand_image, tbl, attr], message: , delay: 5, num_sec: 120, silent_failure: true)
+    wait_for_retval = wait_for(method(:get_table_attr), func_args: [openscap_assigned_rand_image, tbl, attr], message: "Trying to get attribute \"#{attr}\" of table \"#{tbl}\"", delay: 5, num_sec: 120, silent_failure: true)
     if is_bool(!wait_for_retval)
       soft_assert.(false, "Could not get attribute \"{}\" for \"{}\" table.".format(attr, tbl))
       next

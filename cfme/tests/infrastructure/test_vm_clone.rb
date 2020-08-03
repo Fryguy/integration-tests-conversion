@@ -39,7 +39,7 @@ def test_vm_clone(appliance, provider, clone_vm_name, create_vm)
   request_row = appliance.collections.requests.instantiate(request_description, partial_check: true)
   check_all_tabs(request_row, provider)
   request_row.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{request_row.row.last_message.text}"
   raise msg unless request_row.is_succeeded(method: "ui")
 end
 def test_template_clone(request, appliance, provider, clone_vm_name)
@@ -72,7 +72,7 @@ def test_template_clone(request, appliance, provider, clone_vm_name)
     check_all_tabs(request_row, provider)
   end
   request_row.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{request_row.row.last_message.text}"
   raise msg unless request_row.is_succeeded(method: "ui")
 end
 def test_vm_clone_neg(provider, clone_vm_name, create_vm)

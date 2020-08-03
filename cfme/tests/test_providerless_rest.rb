@@ -11,7 +11,7 @@ def change_company_name(appliance)
   old_company_name = appliance.advanced_settings["server"]["company"]
   updated_company_name = "REST Company Name"
   appliance.update_advanced_settings({"server" => {"company" => updated_company_name}})
-  yield updated_company_name
+  yield(updated_company_name)
   appliance.update_advanced_settings({"server" => {"company" => old_company_name}})
 end
 def test_update_roles_via_rest_name_change(appliance, request, change_company_name)
@@ -36,7 +36,7 @@ def test_update_roles_via_rest_name_change(appliance, request, change_company_na
   #   
   old_roles = appliance.advanced_settings["server"]["role"]
   enable_notifier = !old_roles.include?("notifier")
-  new_roles = is_bool(enable_notifier) ?  : old_roles.gsub("notifier", "")
+  new_roles = is_bool(enable_notifier) ? "#{old_roles},notifier" : old_roles.gsub("notifier", "")
   appliance.update_advanced_settings({"server" => {"role" => new_roles}})
   request.addfinalizer(lambda{|| appliance.update_advanced_settings({"server" => {"role" => old_roles}})})
   wait_for(lambda{|| appliance.server_roles["notifier"] == enable_notifier}, delay: 1, num_sec: 120, message: "Wait until the role change comes into effect.")
@@ -71,7 +71,7 @@ def test_authorization_header_sql_response(appliance)
   rest_api = appliance.new_rest_api_instance(entry_point: appliance.rest_api._entry_point)
   rest_api._session.headers = {"Authorization" => "Basic testing"}
   rest_api._session.auth = nil
-  url = 
+  url = "https://#{appliance.hostname}/api/auth?requester_type=ui"
   error_message = "PG::CharacterNotInRepertoire: ERROR:  invalid byte sequence for encoding \"UTF8\": 0xb5
 :"
   pytest.raises(APIException, match: error_message) {

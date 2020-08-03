@@ -9,7 +9,7 @@ def default_alerts(appliance)
       alerts = all_alerts.get("v5.10")
     }
   else
-    pytest.skip()
+    pytest.skip("Could not find #{file_name}, skipping test.")
   end
   alert_collection = appliance.collections.alerts
   default_alerts = alerts.to_a().map{|key, alert| alert_collection.instantiate(description: alert.get("Description"), active: alert.get("Active"), based_on: alert.get("Based On"), evaluate: alert.get("What is evaluated"), emails: alert.get("Email"), snmp_trap: alert.get("SNMP"), timeline_event: alert.get("Event on Timeline"), mgmt_event: alert.get("Management Event Raised"))}

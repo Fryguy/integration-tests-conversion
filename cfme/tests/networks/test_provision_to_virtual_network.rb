@@ -20,12 +20,12 @@ pytestmark = [pytest.mark.provider([RHEVMProvider], required_fields: [["provisio
 def network(provider, appliance)
   # Adding cloud network in ui.
   test_name = fauxfactory.gen_alphanumeric(18, start: "test_network_")
-  net_manager = 
+  net_manager = "#{provider.name} Network Manager"
   collection = appliance.collections.network_providers
   network_provider = collection.instantiate(prov_class: NetworkProvider, name: net_manager)
   collection = appliance.collections.cloud_networks
   ovn_network = collection.create(test_name, "tenant", network_provider, net_manager, "None")
-  yield ovn_network
+  yield(ovn_network)
   if is_bool(ovn_network.exists)
     ovn_network.delete()
   end
@@ -49,5 +49,5 @@ def test_provision_vm_to_virtual_network(appliance, setup_provider, provider, re
   request.addfinalizer(method(:_cleanup))
   template = provisioning["template"]
   provisioning_data = {"catalog" => {"vm_name" => vm_name}, "environment" => {"vm_name" => vm_name, "automatic_placement" => true}, "network" => {"vlan" => partial_match(network.name)}}
-  wait_for(do_vm_provisioning, [appliance, template, provider, vm_name, provisioning_data, request], {"num_sec" => 900}, handle_exception: true, delay: 50, num_sec: 900, fail_func: appliance.server.browser.refresh, message: )
+  wait_for(do_vm_provisioning, [appliance, template, provider, vm_name, provisioning_data, request], {"num_sec" => 900}, handle_exception: true, delay: 50, num_sec: 900, fail_func: appliance.server.browser.refresh, message: "Cannot do provision for vm #{vm_name}.")
 end

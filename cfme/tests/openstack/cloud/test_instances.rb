@@ -38,7 +38,7 @@ def new_instance(provider)
   rescue KeyError
     pytest.skip("Unable to find an image map in provider \"{}\" provisioning data: {}".format(provider, prov_data))
   end
-  yield instance
+  yield(instance)
   begin
     instance.cleanup_on_provider()
   rescue Exception
@@ -49,7 +49,7 @@ def volume(appliance, provider)
   collection = appliance.collections.volumes
   az = (appliance.version < "5.11") ? nil : provider.data["provisioning"]["availability_zone"]
   volume = collection.create(name: fauxfactory.gen_alpha(start: "vol_"), from_manager: false, az: az, tenant: provider.data["provisioning"]["cloud_tenant"], volume_size: VOLUME_SIZE, provider: provider)
-  yield volume
+  yield(volume)
   if is_bool(volume.exists)
     volume.delete(wait: false)
   end
@@ -64,7 +64,7 @@ def volume_with_type(appliance, provider)
   end
   collection = appliance.collections.volumes
   volume = collection.create(name: fauxfactory.gen_alpha(start: "vol_"), from_manager: false, az: az, tenant: provider.data["provisioning"]["cloud_tenant"], volume_type: volume_type.name, volume_size: VOLUME_SIZE, provider: provider)
-  yield volume
+  yield(volume)
   if is_bool(volume.exists)
     volume.delete(wait: false)
   end
@@ -239,7 +239,7 @@ def test_instance_operating_system_linux(new_instance)
   view = navigate_to(new_instance, "Details")
   os = view.entities.summary("Properties").get_text_of("Operating System")
   prov_data_os = new_instance.provider.data["provisioning"]["image"]["os_distro"]
-  raise  unless os == prov_data_os
+  raise "OS type mismatch: expected #{prov_data_os} and got #{os}" unless os == prov_data_os
 end
 def test_instance_attach_volume(volume, new_instance, appliance)
   # 
@@ -251,7 +251,7 @@ def test_instance_attach_volume(volume, new_instance, appliance)
   initial_volume_count = new_instance.volume_count
   new_instance.attach_volume(volume.name)
   view = appliance.browser.create_view(navigator.get_class(new_instance, "AttachVolume").VIEW)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Attaching Cloud Volume \"#{volume.name}\" to #{new_instance.name} finished")
   Wait_for::wait_for(lambda{|| new_instance.volume_count > initial_volume_count}, delay: 20, timeout: 300, message: "Waiting for volume to be attached to instance", fail_func: new_instance.refresh_relationships)
 end
 def test_instance_attach_detach_volume_with_type(volume_with_type, new_instance, appliance)

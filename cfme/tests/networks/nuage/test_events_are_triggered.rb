@@ -91,5 +91,5 @@ def expect_event(listener, event_type, entity_id, comment: "")
   cmp_function = lambda do |_, full_data|
     return full_data["entities"][0]["ID"] == entity_id
   end
-  listener({"full_data" => , "cmp_func" => cmp_function}, source: "NUAGE", event_type: event_type, first_event: true)
+  listener({"full_data" => "#{event_type} [ID=#{entity_id}] #{comment}", "cmp_func" => cmp_function}, source: "NUAGE", event_type: event_type, first_event: true)
 end

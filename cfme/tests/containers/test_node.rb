@@ -31,7 +31,7 @@ def test_nodes_navigate(soft_assert, appliance)
     begin
       view = navigate_to(test_item, dest)
     rescue NodeNotFound
-      soft_assert.(false, )
+      soft_assert.(false, "Could not navigate to Node \"#{dest}\" .")
     end
   end
 end

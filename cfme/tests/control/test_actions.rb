@@ -89,11 +89,11 @@ end
 def compliance_condition(appliance)
   condition_collection = appliance.collections.conditions
   _compliance_condition = condition_collection.create(conditions.VMCondition, fauxfactory.gen_alpha(), expression: "fill_tag(VM and Instance.My Company Tags : Service Level, Gold)")
-  yield _compliance_condition
+  yield(_compliance_condition)
   _compliance_condition.delete_if_exists()
 end
 def compliance_policy(vm, policy_name, appliance)
-  compliance_policy = appliance.collections.policies.create(policies.VMCompliancePolicy, , scope: )
+  compliance_policy = appliance.collections.policies.create(policies.VMCompliancePolicy, "compliance_#{policy_name}", scope: "fill_field(VM and Instance : Name, INCLUDES, #{vm.name})")
   return compliance_policy
 end
 def compliance_tag(appliance)
@@ -102,11 +102,11 @@ def compliance_tag(appliance)
   return tag
 end
 def policy_for_testing(provider, vm, policy_name, policy_profile_name, compliance_policy, compliance_condition, appliance)
-  control_policy = appliance.collections.policies.create(policies.VMControlPolicy, policy_name, scope: )
+  control_policy = appliance.collections.policies.create(policies.VMControlPolicy, policy_name, scope: "fill_field(VM and Instance : Name, INCLUDES, #{vm.name})")
   policy_profile_collection = appliance.collections.policy_profiles
   policy_profile = policy_profile_collection.create(policy_profile_name, policies: [control_policy, compliance_policy])
   provider.assign_policy_profiles(policy_profile_name)
-  yield control_policy
+  yield(control_policy)
   provider.unassign_policy_profiles(policy_profile_name)
   policy_profile.delete()
   compliance_policy.delete()
@@ -120,7 +120,7 @@ def host_policy(appliance, host)
   policy_profile_collection = appliance.collections.policy_profiles
   policy_profile = policy_profile_collection.create(fauxfactory.gen_alphanumeric(40, start: "action_testing: host policy profile "), policies: [control_policy])
   host.assign_policy_profiles(policy_profile.description)
-  yield control_policy
+  yield(control_policy)
   host.unassign_policy_profiles(policy_profile.description)
   policy_profile.delete()
   control_policy.delete()
@@ -163,7 +163,7 @@ def test_action_start_virtual_machine_after_stopping(request, vm, vm_on, policy_
   begin
     vm.mgmt.wait_for_state(VmState.RUNNING, timeout: 600, delay: 5)
   rescue TimedOutError
-    pytest.fail()
+    pytest.fail("CFME did not power on the VM #{vm.name}")
   end
 end
 def test_action_stop_virtual_machine_after_starting(request, vm, vm_off, policy_for_testing)
@@ -189,7 +189,7 @@ def test_action_stop_virtual_machine_after_starting(request, vm, vm_off, policy_
   begin
     vm.mgmt.wait_for_state(VmState.STOPPED, timeout: 600, delay: 5)
   rescue TimedOutError
-    pytest.fail()
+    pytest.fail("CFME did not power off the VM #{vm.name}")
   end
 end
 def test_action_suspend_virtual_machine_after_starting(request, vm, vm_off, policy_for_testing)
@@ -215,7 +215,7 @@ def test_action_suspend_virtual_machine_after_starting(request, vm, vm_off, poli
   begin
     vm.mgmt.wait_for_state(VmState.SUSPENDED, timeout: 600, delay: 5)
   rescue TimedOutError
-    pytest.fail()
+    pytest.fail("CFME did not suspend the VM #{vm.name}")
   end
 end
 def test_action_prevent_event(request, vm, vm_off, policy_for_testing)
@@ -294,7 +294,7 @@ def test_action_prevent_ssa(request, configure_fleecing, vm, vm_on, policy_for_t
   _cleanup = lambda do
     policy_for_testing.unassign_events("VM Analysis Request")
   end
-  policy_result = LogValidator("/var/www/miq/vmdb/log/policy.log", matched_patterns: [])
+  policy_result = LogValidator("/var/www/miq/vmdb/log/policy.log", matched_patterns: [".*Prevent current event from proceeding.*VM Analysis Request.*#{vm.name}"])
   policy_result.start_monitoring()
   wait_for_ssa_enabled(method(:vm))
   begin
@@ -323,7 +323,7 @@ def test_action_prevent_host_ssa(request, host, host_policy)
   _cleanup = lambda do
     host_policy.unassign_events("Host Analysis Request")
   end
-  policy_result = LogValidator("/var/www/miq/vmdb/log/policy.log", matched_patterns: [])
+  policy_result = LogValidator("/var/www/miq/vmdb/log/policy.log", matched_patterns: [".*Prevent current event from proceeding.*Host Analysis Request.*#{host.name}"])
   policy_result.start_monitoring()
   view = navigate_to(method(:host), "Details")
   _scan = lambda do
@@ -331,7 +331,7 @@ def test_action_prevent_host_ssa(request, host, host_policy)
   end
   original = _scan.call()
   view.toolbar.configuration.item_select("Perform SmartState Analysis", handle_alert: true)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("\"#{host.name}\": Analysis successfully initiated")
   begin
     wait_for(lambda{|| _scan.call() != original}, num_sec: 60, delay: 5, fail_func: view.browser.refresh, message: "Check if Drift History field is changed")
   rescue TimedOutError
@@ -485,7 +485,7 @@ def test_action_initiate_smartstate_analysis(request, configure_fleecing, vm, vm
   begin
     do_scan(method(:vm))
   rescue TimedOutError
-    pytest.fail()
+    pytest.fail("CFME did not finish analysing the VM #{vm.name}")
   end
 end
 def test_action_tag(request, vm, vm_off, policy_for_testing, appliance)
@@ -573,7 +573,7 @@ def test_action_cancel_clone(appliance, request, provider, vm_big, policy_for_te
   }
   policy_for_testing.assign_events("VM Clone Start")
   policy_for_testing.assign_actions_to_event("VM Clone Start", ["Cancel vCenter Task"])
-  clone_vm_name = 
+  clone_vm_name = "#{vm_big.name}-clone"
   finalize = lambda do
     policy_for_testing.unassign_events("VM Clone Start")
     collection = provider.appliance.provider_based_collection(provider)

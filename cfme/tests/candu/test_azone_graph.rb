@@ -59,7 +59,7 @@ def test_azone_graph_screen(provider, azone, graph_type, interval, enable_candu)
     view.options.interval.fill(interval)
   end
   wait_for(lambda{|| graph.all_legends.size > 0}, delay: 5, timeout: 200, fail_func: refresh)
-  avg_graph = (graph_type == "azone_instance") ? graph_type : 
+  avg_graph = (graph_type == "azone_instance") ? graph_type : "#{graph_type}_avg"
   begin
     avg_graph = view.getattr(avg_graph)
   rescue NoMethodError => e

@@ -30,10 +30,10 @@ def test_tables_sort(test_item, soft_assert, appliance)
       next
     end
     view.entities.elements.sort_by(column: header_text, order: "asc")
-    soft_assert.(view.entities.elements.sorted_by == attributize_string(header_text) && view.entities.elements.sort_order == "asc", )
+    soft_assert.(view.entities.elements.sorted_by == attributize_string(header_text) && view.entities.elements.sort_order == "asc", "Failed checking sorted_by #{header_text} and sort_order asc")
     rows_ascending = view.entities.elements.rows().map{|r| r[col].text}
     view.entities.elements.sort_by(column: header_text, order: "desc")
-    soft_assert.(view.entities.elements.sorted_by == attributize_string(header_text) && view.entities.elements.sort_order == "desc", )
+    soft_assert.(view.entities.elements.sorted_by == attributize_string(header_text) && view.entities.elements.sort_order == "desc", "Failed checking sorted_by #{header_text} and sort_order desc")
     rows_descending = view.entities.elements.rows().map{|r| r[col].text}
     soft_assert.(rows_ascending[0..-1].each_slice(-1).map(&:first) == rows_descending, "Malfunction in the table sort: {} != {}".format(rows_ascending[0..-1].each_slice(-1).map(&:first), rows_descending))
   end

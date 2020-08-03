@@ -132,7 +132,7 @@ def set_hosts_credentials(appliance, request, provider)
 end
 def set_agent_creds(appliance, request, provider)
   version = appliance.version.vstring
-  docker_image_name = 
+  docker_image_name = "simaishi/amazon-ssa:#{version}"
   unique_agent = fauxfactory.gen_alpha(length: 20, start: "test_ssa_agent-")
   agent_data = {"ems" => {"ems_amazon" => {"agent_coordinator" => {"agent_label" => unique_agent, "docker_image" => docker_image_name, "docker_registry" => "docker.io"}}}}
   if is_bool(BZ(1684203, forced_streams: ["5.10"]).blocks)
@@ -177,7 +177,7 @@ def ssa_compliance_policy(appliance)
   policy = appliance.collections.policies.create(VMControlPolicy, fauxfactory.gen_alpha(15, start: "ssa_policy_"))
   policy.assign_events("VM Provision Complete")
   policy.assign_actions_to_event("VM Provision Complete", ["Initiate SmartState Analysis for VM"])
-  yield policy
+  yield(policy)
   policy.unassign_events("VM Provision Complete")
   policy.delete()
 end
@@ -192,7 +192,7 @@ def ssa_single_vm(request, local_setup_provider, enable_smartproxy_affinity, pro
   #  Fixture to provision instance on the provider 
   _ssa_single_vm = lambda do
     template_name = vm_analysis_provisioning_data["image"]
-    vm_name = 
+    vm_name = "test-ssa-#{fauxfactory.gen_alphanumeric()}-#{analysis_type}"
     collection = provider.appliance.provider_based_collection(provider)
     vm = collection.instantiate(vm_name, provider, template_name: vm_analysis_provisioning_data.image)
     provision_data = vm_analysis_provisioning_data.copy()
@@ -280,21 +280,21 @@ def ssa_analysis_profile(appliance)
     analysis_profile.delete()
   end
   analysis_profile = analysis_profiles_collection.create(None: analysis_profile_data)
-  yield analysis_profile
+  yield(analysis_profile)
   if is_bool(analysis_profile.exists)
     analysis_profile.delete()
   end
 end
 def ssa_action(appliance, ssa_analysis_profile)
   action = appliance.collections.actions.create(fauxfactory.gen_alpha(15, start: "ssa_action_"), "Assign Profile to Analysis Task", {})
-  yield action
+  yield(action)
   action.delete()
 end
 def ssa_policy(appliance, ssa_action)
   policy = appliance.collections.policies.create(VMControlPolicy, fauxfactory.gen_alpha(15, start: "ssa_policy_"))
   policy.assign_events("VM Analysis Start")
   policy.assign_actions_to_event("VM Analysis Start", ssa_action)
-  yield policy
+  yield(policy)
   policy.unassign_events("VM Analysis Start")
 end
 def detect_system_type(vm)
@@ -326,7 +326,7 @@ def schedule_ssa(appliance, ssa_vm, wait_for_task_result: true)
   ss = appliance.collections.system_schedules.create(None: schedule_args)
   ss.enable()
   if is_bool(wait_for_task_result)
-    task = appliance.collections.tasks.instantiate(name: , tab: "AllTasks")
+    task = appliance.collections.tasks.instantiate(name: "Scan from Vm #{ssa_vm.name}", tab: "AllTasks")
     task.wait_for_finished()
   end
   return ss
@@ -346,10 +346,10 @@ def compare_linux_vm_data(soft_assert)
     current_groups = view.entities.summary("Security").get_text_of("Groups")
     current_packages = view.entities.summary("Configuration").get_text_of("Packages")
     current_services = view.entities.summary("Configuration").get_text_of("Init Processes")
-    soft_assert(current_users == expected_users, )
-    soft_assert(current_groups == expected_groups, )
-    soft_assert(current_packages == expected_packages, )
-    soft_assert(current_services == expected_services, )
+    soft_assert(current_users == expected_users, "users: '#{current_users}' != '#{expected_users}'")
+    soft_assert(current_groups == expected_groups, "groups: '#{current_groups}' != '#{expected_groups}'")
+    soft_assert(current_packages == expected_packages, "packages: '#{current_packages}' != '#{expected_packages}'")
+    soft_assert(current_services == expected_services, "services: '#{current_services}' != '#{expected_services}'")
   end
   return _compare_linux_vm_data
 end
@@ -362,11 +362,11 @@ def compare_windows_vm_data(soft_assert)
     current_win32_services = view.entities.summary("Configuration").get_text_of("Win32 Services")
     current_kernel_drivers = view.entities.summary("Configuration").get_text_of("Kernel Drivers")
     current_fs_drivers = view.entities.summary("Configuration").get_text_of("File System Drivers")
-    soft_assert(current_patches != "0", )
+    soft_assert(current_patches != "0", "patches: '#{current_patches}' != '0'")
     soft_assert(current_applications != "0", "applications: '{}' != '0'".format(current_applications))
-    soft_assert(current_win32_services != "0", )
-    soft_assert(current_kernel_drivers != "0", )
-    soft_assert(current_fs_drivers != "0", )
+    soft_assert(current_win32_services != "0", "win32 services: '#{current_win32_services}' != '0'")
+    soft_assert(current_kernel_drivers != "0", "kernel drivers: '#{current_kernel_drivers}' != '0'")
+    soft_assert(current_fs_drivers != "0", "fs drivers: '#{current_fs_drivers}' != '0'")
   end
   return _compare_windows_vm_data
 end
@@ -390,7 +390,7 @@ def test_ssa_template(local_setup_provider, provider, soft_assert, vm_analysis_p
   quadicon_os_icon = template.find_quadicon().data["os"]
   view = navigate_to(template, "Details")
   details_os_icon = view.entities.summary("Properties").get_text_of("Operating System")
-  logger.info()
+  logger.info("Icons: #{details_os_icon}, #{quadicon_os_icon}")
   c_users = view.entities.summary("Security").get_text_of("Users")
   c_groups = view.entities.summary("Security").get_text_of("Groups")
   c_packages = 0
@@ -399,9 +399,9 @@ def test_ssa_template(local_setup_provider, provider, soft_assert, vm_analysis_p
   end
   logger.info("SSA shows {} users, {} groups and {} packages".format(c_users, c_groups, c_packages))
   if !["ntfs", "fat32"].include?(vm_analysis_provisioning_data["fs-type"])
-    soft_assert.(c_users != "0", )
-    soft_assert.(c_groups != "0", )
-    soft_assert.(c_packages != "0", )
+    soft_assert.(c_users != "0", "users: '#{c_users}' != '0'")
+    soft_assert.(c_groups != "0", "groups: '#{c_groups}' != '0'")
+    soft_assert.(c_packages != "0", "packages: '#{c_packages}' != '0'")
   else
     compare_windows_vm_data.(ssa_vm)
   end
@@ -420,7 +420,7 @@ def test_ssa_compliance(local_setup_provider, ssa_compliance_profile, ssa_vm, so
   #       tags: smartstate
   #   
   ssa_vm.smartstate_scan(wait_for_task_result: true)
-  task = appliance.collections.tasks.instantiate(name: , tab: "AllTasks")
+  task = appliance.collections.tasks.instantiate(name: "Scan from Vm #{ssa_vm.name}", tab: "AllTasks")
   task.wait_for_finished()
   quadicon_os_icon = ssa_vm.find_quadicon().data["os"]
   view = navigate_to(ssa_vm, "Details")
@@ -428,8 +428,8 @@ def test_ssa_compliance(local_setup_provider, ssa_compliance_profile, ssa_vm, so
   logger.info("Icons: %s, %s", details_os_icon, quadicon_os_icon)
   c_lastanalyzed = ssa_vm.last_analysed
   soft_assert.(c_lastanalyzed != "Never", "Last Analyzed is set to Never")
-  soft_assert.(details_os_icon.downcase().include?(vm_system_type), )
-  soft_assert.(quadicon_os_icon.downcase().include?(vm_system_type), )
+  soft_assert.(details_os_icon.downcase().include?(vm_system_type), "details icon: '#{vm_system_type}' not in '#{details_os_icon}'")
+  soft_assert.(quadicon_os_icon.downcase().include?(vm_system_type), "quad icon: '#{vm_system_type}' not in '#{quadicon_os_icon}'")
   if ssa_vm.system_type != WINDOWS
     compare_linux_vm_data.(ssa_vm)
   else
@@ -456,8 +456,8 @@ def test_ssa_schedule(ssa_vm, schedule_ssa, soft_assert, vm_system_type, compare
   c_lastanalyzed = ssa_vm.last_analysed
   soft_assert.(c_lastanalyzed != "Never", "Last Analyzed is set to Never")
   os_type = (vm_system_type != "redhat") ? vm_system_type : "red hat"
-  soft_assert.(details_os_icon.downcase().include?(os_type), )
-  soft_assert.(quadicon_os_icon.downcase().include?(vm_system_type), )
+  soft_assert.(details_os_icon.downcase().include?(os_type), "details icon: '#{vm_system_type}' not in '#{details_os_icon}'")
+  soft_assert.(quadicon_os_icon.downcase().include?(vm_system_type), "quad icon: '#{vm_system_type}' not in '#{quadicon_os_icon}'")
   if ssa_vm.system_type != WINDOWS
     compare_linux_vm_data.(ssa_vm)
   else
@@ -484,8 +484,8 @@ def test_ssa_vm(ssa_vm, scanned_vm, soft_assert, vm_system_type, compare_linux_v
   c_lastanalyzed = ssa_vm.last_analysed
   soft_assert.(c_lastanalyzed != "Never", "Last Analyzed is set to Never")
   os_type = (vm_system_type != "redhat") ? vm_system_type : "red hat"
-  soft_assert.(details_os_icon.downcase().include?(os_type), )
-  soft_assert.(quadicon_os_icon.downcase().include?(vm_system_type), )
+  soft_assert.(details_os_icon.downcase().include?(os_type), "details icon: '#{os_type}' not in '#{details_os_icon}'")
+  soft_assert.(quadicon_os_icon.downcase().include?(vm_system_type), "quad icon: '#{vm_system_type}' not in '#{quadicon_os_icon}'")
   if ssa_vm.system_type != WINDOWS
     compare_linux_vm_data.(ssa_vm)
   else
@@ -524,7 +524,7 @@ def test_ssa_users(ssa_vm)
     begin
       details_property_view.paginator.find_row_on_pages(details_property_view.table, name: username)
     rescue NoSuchElementException
-      pytest.fail()
+      pytest.fail("User #{username} was not found in details table after SSA run")
     end
   end
 end
@@ -560,7 +560,7 @@ def test_ssa_groups(ssa_vm)
     begin
       details_property_view.paginator.find_row_on_pages(details_property_view.table, name: group)
     rescue NoSuchElementException
-      pytest.fail()
+      pytest.fail("Group #{group} was not found in details table after SSA run")
     end
   end
 end
@@ -584,7 +584,7 @@ def test_ssa_packages(ssa_vm)
     pytest.skip("Windows has no packages")
   end
   if !ssa_vm.system_type.keys().to_a.include?("package")
-    pytest.skip()
+    pytest.skip("Don't know how to update packages for #{ssa_vm.system_type}")
   end
   package_name = ssa_vm.system_type["package"]
   package_command = ssa_vm.system_type["install-command"]
@@ -603,7 +603,7 @@ def test_ssa_packages(ssa_vm)
   begin
     details_property_view.paginator.find_row_on_pages(details_property_view.table, name: package_name)
   rescue NoSuchElementException
-    pytest.fail()
+    pytest.fail("Package #{package_name} was not found in details table after SSA run")
   end
 end
 def test_ssa_files(ssa_vm)
@@ -659,12 +659,12 @@ def test_drift_analysis(request, ssa_vm, soft_assert, appliance)
   ssa_vm.smartstate_scan(wait_for_task_result: true)
   view = navigate_to(ssa_vm, "Details")
   wait_for(lambda{|| view.entities.summary("Relationships").get_text_of("Drift History") == (drift_new + 1).to_s}, delay: 20, num_sec: 360, message: "Waiting for Drift History count to increase", fail_func: view.toolbar.reload.click)
-  soft_assert.(ssa_vm.equal_drift_results(, "My Company Tags", 0, 1), "Drift analysis results are equal when they shouldn't be")
+  soft_assert.(ssa_vm.equal_drift_results("#{added_tag.category.display_name} (1)", "My Company Tags", 0, 1), "Drift analysis results are equal when they shouldn't be")
   drift_analysis_view = appliance.browser.create_view(DriftAnalysis)
   drift_analysis_view.toolbar.same_values_attributes.click()
-  soft_assert.(!drift_analysis_view.drift_analysis.check_section_attribute_availability(), )
+  soft_assert.(!drift_analysis_view.drift_analysis.check_section_attribute_availability("#{added_tag.category.display_name}"), "#{added_tag.display_name} row should be hidden, but not")
   drift_analysis_view.toolbar.different_values_attributes.click()
-  soft_assert.(drift_analysis_view.drift_analysis.check_section_attribute_availability(), )
+  soft_assert.(drift_analysis_view.drift_analysis.check_section_attribute_availability("#{added_tag.category.display_name} (1)"), "#{added_tag.display_name} row should be visible, but not")
 end
 def test_ssa_multiple_vms(ssa_multiple_vms, soft_assert, appliance, compare_linux_vm_data, compare_windows_vm_data)
   #  Tests SSA run while selecting multiple vms at once
@@ -691,7 +691,7 @@ def test_ssa_multiple_vms(ssa_multiple_vms, soft_assert, appliance, compare_linu
   view.toolbar.configuration.item_select("Perform SmartState Analysis", handle_alert: true)
   view.flash.assert_message("Analysis initiated for 3 VMs and Instances from the CFME Database")
   for ssa_vm in ssa_multiple_vms
-    task = appliance.collections.tasks.instantiate(name: , tab: "AllTasks")
+    task = appliance.collections.tasks.instantiate(name: "Scan from Vm #{ssa_vm.name}", tab: "AllTasks")
     task.wait_for_finished()
     current_lastanalyzed = ssa_vm.last_analysed
     soft_assert.(current_lastanalyzed != "Never", "Last Analyzed is set to Never")

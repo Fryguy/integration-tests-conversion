@@ -18,7 +18,7 @@ def test_domain_present(domain_name, soft_assert, appliance)
   #           3. Verify that all of the required domains are present.
   #   
   domain = appliance.collections.domains.instantiate(name: domain_name)
-  soft_assert.(domain.exists, )
-  soft_assert.(domain.locked, )
-  soft_assert.(appliance.check_domain_enabled(domain_name), )
+  soft_assert.(domain.exists, "Domain #{domain_name} does not exist!")
+  soft_assert.(domain.locked, "Domain #{domain_name} is not locked!")
+  soft_assert.(appliance.check_domain_enabled(domain_name), "Domain #{domain_name} is not enabled!")
 end

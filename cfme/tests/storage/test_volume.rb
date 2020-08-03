@@ -31,7 +31,7 @@ def from_manager(request)
 end
 def volume(appliance, provider)
   volume = create_volume(appliance, provider, should_assert: false)
-  yield volume
+  yield(volume)
   begin
     if is_bool(volume.exists)
       volume.delete(wait: true)
@@ -44,7 +44,7 @@ def attached_volume(appliance, provider, instance_fixture)
   volume = create_volume(appliance, provider, method(:from_manager), az: instance_fixture.vm_default_args["environment"]["availability_zone"], should_assert: true)
   volume.attach_instance(name: instance_fixture.name, mountpoint: "/dev/sdm", from_manager: from_manager)
   wait_for(lambda{|| volume.instance_count == 1}, delay: 15, timeout: 600)
-  yield volume
+  yield(volume)
   begin
     if is_bool(volume.exists)
       if volume.instance_count > 0
@@ -67,7 +67,7 @@ def instance_fixture(appliance, provider, small_template)
       instance.create_on_provider(allow_skip: "default", find_in_cfme: true)
     end
   end
-  yield instance
+  yield(instance)
   instance.cleanup_on_provider()
 end
 def create_volume(appliance, provider, is_from_manager: false, az: nil, cancel: false, should_assert: false)
@@ -81,7 +81,7 @@ def create_volume(appliance, provider, is_from_manager: false, az: nil, cancel: 
     end
   else
     if is_bool(provider.one_of(EC2Provider))
-      az = is_bool(az) ? az : 
+      az = is_bool(az) ? az : "#{provider.region}a"
       volume = volume_collection.create(name: name, volume_type: "General Purpose SSD (GP2)", volume_size: STORAGE_SIZE, provider: provider, az: az, from_manager: is_from_manager, cancel: cancel)
     end
   end
@@ -240,7 +240,7 @@ def test_multiple_cloud_volumes_tag_edit(appliance, soft_assert)
   assigned_tag = appliance.collections.volumes.add_tag(volumes)
   for item in volumes
     tag_available = item.get_tags()
-    soft_assert.(tag_available.map{|tag| tag.category.display_name == assigned_tag.category.display_name && tag.display_name == assigned_tag.display_name}.is_any?, )
+    soft_assert.(tag_available.map{|tag| tag.category.display_name == assigned_tag.category.display_name && tag.display_name == assigned_tag.display_name}.is_any?, "Tag is not assigned to volume #{item.name}")
   end
   appliance.collections.volumes.remove_tag(volumes, assigned_tag)
   for item in volumes

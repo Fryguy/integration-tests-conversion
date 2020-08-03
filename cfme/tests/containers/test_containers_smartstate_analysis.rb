@@ -72,7 +72,7 @@ def test_containers_smartstate_analysis(provider, test_item, soft_assert, delete
   for (tbl, attr, verifier) in test_item.tested_attr
     table = view.entities.getattr(tbl)
     table_data = table.read().to_a().map{|k, v|[k.downcase(), v]}.to_h
-    if is_bool(!soft_assert.(table_data.include?(attr.downcase()), ))
+    if is_bool(!soft_assert.(table_data.include?(attr.downcase()), "#{tbl} table has missing attribute '#{attr}'"))
       next
     end
     provider.refresh_provider_relationships()
@@ -82,7 +82,7 @@ def test_containers_smartstate_analysis(provider, test_item, soft_assert, delete
       next
     end
     value = wait_for_retval.out
-    soft_assert.(verifier(value), )
+    soft_assert.(verifier(value), "#{tbl}.#{attr} attribute has unexpected value (#{value})")
   end
 end
 def test_containers_smartstate_analysis_api(provider, test_item, soft_assert, delete_all_container_tasks, random_image_instance)
@@ -105,7 +105,7 @@ def test_containers_smartstate_analysis_api(provider, test_item, soft_assert, de
   end
   original_scan = random_image_instance.last_scan_attempt_on
   random_image_instance.scan()
-  task = provider.appliance.collections.tasks.instantiate(name: , tab: "AllTasks")
+  task = provider.appliance.collections.tasks.instantiate(name: "Container Image Analysis: '#{random_image_instance.name}'", tab: "AllTasks")
   task.wait_for_finished()
   soft_assert.(original_scan != random_image_instance.last_scan_attempt_on, "SmartState Anaysis scan has failed")
 end

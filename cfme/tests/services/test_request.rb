@@ -19,7 +19,7 @@ def test_copy_request_bz1194479(appliance, provider, catalog_item, request)
   #       tags: service
   #   
   vm_name = catalog_item.prov_data["catalog"]["vm_name"]
-  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(, provider).cleanup_on_provider()})
+  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate("#{vm_name}0001", provider).cleanup_on_provider()})
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
   service_catalogs.order()
   request_description = catalog_item.name

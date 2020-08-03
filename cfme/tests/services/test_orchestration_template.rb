@@ -41,7 +41,7 @@ def created_template(appliance, template_type)
   method = METHOD_TORSO.gsub("CloudFormation", fauxfactory.gen_alphanumeric())
   collection = appliance.collections.orchestration_templates
   template = collection.create(template_group: templates.get(template_type)[1], template_type: templates.get(template_type)[0], template_name: fauxfactory.gen_alphanumeric(), description: "my template", content: method)
-  yield template
+  yield(template)
   template.delete()
 end
 def test_orchestration_template_crud(appliance, template_type)
@@ -73,7 +73,7 @@ def test_copy_template(created_template)
   #   
   copied_method = METHOD_TORSO_copied.gsub("CloudFormation", fauxfactory.gen_alphanumeric())
   template = created_template
-  template_copy = template.copy_template(, copied_method)
+  template_copy = template.copy_template("#{template.template_name}_copied", copied_method)
   raise unless template_copy.exists
   template_copy.delete()
 end
@@ -148,7 +148,7 @@ def test_duplicated_content_error_validation(appliance, created_template, templa
   #   
   collection = appliance.collections.orchestration_templates
   if action == "copy"
-    copy_name = 
+    copy_name = "#{created_template.template_name}_copied"
     flash_msg = "Unable to create a new template copy \"{}\": old and new template content have to differ.".format(copy_name)
     pytest.raises(RuntimeError, match: flash_msg) {
       created_template.copy_template(copy_name, created_template.content)

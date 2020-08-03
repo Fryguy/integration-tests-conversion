@@ -14,10 +14,10 @@ pytestmark = [test_requirements.automate]
 def get_namespace(request, domain)
   namespace = domain.namespaces.create(name: fauxfactory.gen_alpha(), description: fauxfactory.gen_alpha())
   if request.param == "plain"
-    yield namespace
+    yield(namespace)
   else
     namespace = namespace.namespaces.create(name: fauxfactory.gen_alpha(), description: fauxfactory.gen_alpha())
-    yield namespace
+    yield(namespace)
   end
   namespace.delete_if_exists()
 end
@@ -57,7 +57,7 @@ def test_schema_crud(get_namespace)
   a_class.schema.add_fields({"name" => f1, "type" => "Relationship"}, {"name" => f2, "type" => "Attribute"})
   a_class.schema.add_field(name: f3, type: "Relationship")
   a_class.schema.delete_field(f1)
-  raise unless Set.new(a_class.schema.schema_field_names) == 
+  raise unless Set.new(a_class.schema.schema_field_names) == Set.new([f2, f3])
 end
 def test_schema_duplicate_field_disallowed(klass)
   # 
@@ -168,15 +168,17 @@ def test_state_machine_variable(klass)
   #       tags: automate
   #   
   schema_field1,schema_field2,state_var = 3.times.map{|i| fauxfactory.gen_alpha()}
-  script1 = dedent()
+  script1 = dedent("
+        $evm.set_state_var(:var1, \"#{state_var}\")
+        ")
   script2 = dedent("
         state_value = $evm.get_state_var(:var1)
         $evm.log(\'info\', \"Value of state var returned #{state_value}\")
         ")
   klass.schema.add_fields(*[schema_field1, schema_field2].map{|field| {"name" => field, "type" => "State", "data_type" => "String"}})
   methods = [script1, script2].map{|script| klass.methods.create(name: fauxfactory.gen_alphanumeric(), location: "inline", script: script)}.to_a
-  instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"schema_field1" => {"value" => }, "schema_field2" => {"value" => }})
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [])).waiting(timeout: 120) {
+  instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"schema_field1" => {"value" => "METHOD::#{methods[0].name}"}, "schema_field2" => {"value" => "METHOD::#{methods[1].name}"}})
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Value of state var returned #{state_var}.*"])).waiting(timeout: 120) {
     simulate(appliance: klass.appliance, attributes_values: {"namespace" => klass.namespace.name, "class" => klass.name, "instance" => instance.name}, message: "create", request: "Call_Instance", execute_methods: true)
   }
 end

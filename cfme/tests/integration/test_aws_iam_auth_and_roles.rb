@@ -35,7 +35,7 @@ def pytest_generate_tests(metafunc)
   for (role_access, context) in roles_and_context
     for group in role_access.keys()
       parameter_list.push([group, role_access, context])
-      id_list.push()
+      id_list.push("#{group}-#{context}")
     end
   end
   metafunc.parametrize("group_name, role_access, context", parameter_list)
@@ -62,7 +62,7 @@ def test_group_roles(temp_appliance_preconfig_long, setup_aws_auth_provider, gro
     password = credentials[iam_group_name]["password"]
     fullname = credentials[iam_group_name]["fullname"]
   rescue KeyError
-    pytest.fail()
+    pytest.fail("No match in credentials file for group \"#{iam_group_name}\"")
   end
   temp_appliance_preconfig_long.context.use(context) {
     user = temp_appliance_preconfig_long.collections.users.simple_user(username, password, fullname: fullname)

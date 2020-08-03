@@ -75,7 +75,7 @@ INFRA_PROVIDER_RELATIONSHIPS = [["Clusters", ProviderAllClustersView], ["Hosts",
 CLOUD_PROVIDER_RELATIONSHIPS = [["Network Manager", NetworkProviderDetailsView], ["Availability Zones", ProviderAvailabilityZoneAllView], ["Cloud Tenants", ProviderTenantAllView], ["Flavors", ProviderFlavorAllView], ["Security Groups", ProviderSecurityGroupAllView], ["Instances", CloudProviderInstancesView], ["Images", CloudProviderImagesView], ["Orchestration Stacks", ProviderStackAllView], ["Storage Managers", ProviderStorageManagerAllView]]
 cloud_test_items = ["cloud_instances", "cloud_flavors", "cloud_av_zones", "cloud_tenants", "cloud_images", "security_groups", "cloud_stacks", "block_managers", "network_providers"]
 infra_test_items = ["clusters", "hosts", "datastores", "infra_vms", "infra_templates"]
-RELATIONSHIPS = 
+RELATIONSHIPS = Set.new(["Infrastructure Provider", "Availability zones", "Availability Zones", "Flavors", "Security Groups", "Instances", "Images", "Orchestration stacks", "Orchestration Stacks", "Storage Managers", "Cloud Tenants", "Cloud tenants"])
 def get_obj(relationship, appliance, **kwargs)
   if RELATIONSHIPS.include?(relationship)
     obj = kwargs.get("provider")
@@ -87,7 +87,7 @@ def get_obj(relationship, appliance, **kwargs)
       view = navigate_to(host, "Details")
       cluster_name = view.entities.summary("Relationships").get_text_of("Cluster")
       if cluster_name == "None"
-        pytest.skip()
+        pytest.skip("Host #{host.name} is not a clustered host")
       end
       obj = cluster_col.instantiate(name: cluster_name, provider: provider)
     else
@@ -122,7 +122,7 @@ def test_host_relationships(appliance, provider, setup_provider, host, relations
   #   
   host_view = navigate_to(host, "Details")
   if host_view.entities.summary("Relationships").get_text_of(relationship) == "0"
-    pytest.skip()
+    pytest.skip("There are no relationships for #{relationship}")
   end
   obj = get_obj(relationship, appliance, provider: provider, host: host)
   host_view.entities.summary("Relationships").click_at(relationship)
@@ -141,7 +141,7 @@ def test_infra_provider_relationships(appliance, provider, setup_provider, relat
   #   
   provider_view = navigate_to(provider, "Details")
   if provider_view.entities.summary("Relationships").get_text_of(relationship) == "0"
-    pytest.skip()
+    pytest.skip("There are no relationships for #{relationship}")
   end
   provider_view.entities.summary("Relationships").click_at(relationship)
   relationship_view = appliance.browser.create_view(view, additional_context: {"object" => provider})
@@ -159,7 +159,7 @@ def test_cloud_provider_relationships(appliance, provider, setup_provider, relat
   #   
   provider_view = navigate_to(provider, "Details")
   if provider_view.entities.summary("Relationships").get_text_of(relationship) == "0"
-    pytest.skip()
+    pytest.skip("There are no relationships for #{relationship}")
   end
   obj = get_obj(relationship, appliance, provider: provider)
   provider_view.entities.summary("Relationships").click_at(relationship)
@@ -175,7 +175,7 @@ def prov_child_visibility(appliance, provider, request, tag, user_restricted)
       provider.remove_tag(tag: tag)
     end
     if is_bool(!actual_visibility)
-      pytest.skip()
+      pytest.skip("There are no relationships for #{relationship}")
     end
     user_restricted {
       actual_visibility = _check_actual_visibility(rel_cls)
@@ -346,7 +346,7 @@ def testing_vm(appliance, provider, win2012_template)
     logger.info("deploying %s on provider %s", vm.name, provider.key)
     vm.create_on_provider(allow_skip: "default", find_in_cfme: true)
   end
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def test_datastore_relationships(setup_provider, testing_vm)
@@ -391,7 +391,7 @@ def cluster(provider)
   begin
     cluster_name = provider.data["cap_and_util"]["cluster"]
   rescue KeyError
-    pytest.skip()
+    pytest.skip("Unable to identify cluster for provider: #{provider}")
   end
   return collection.instantiate(name: cluster_name, provider: provider)
 end

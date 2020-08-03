@@ -36,5 +36,5 @@ def test_table_views(appliance, selected_view, container_obj)
   obj = (collection_name === ContainersProvider) ? ContainersProvider : appliance.collections.getattr(collection_name)
   view = navigate_to(obj, "All")
   view.toolbar.view_selector.select(selected_view)
-  raise  unless selected_view == view.toolbar.view_selector.selected
+  raise "Failed to set view #{view} For #{collection_name}" unless selected_view == view.toolbar.view_selector.selected
 end

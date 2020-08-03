@@ -30,7 +30,7 @@ def enable_capacity_and_utilization(appliance)
   if is_bool(appliance.wait_for_server_roles(args, delay: 10, timeout: 300))
     yield
   else
-    pytest.skip()
+    pytest.skip("Failed to set server roles on appliance #{appliance}")
   end
   logger.info("Disabling metrics collection roles")
   appliance.server.settings.disable_server_roles(*args)
@@ -55,11 +55,11 @@ def test_basic_metrics(provider)
     router = (provider.mgmt.list_route().select{|router| (router.metadata.name == "hawkular-metrics") || router.metadata.name == "prometheus"}.map{|router| router}).pop()
     metrics_url = router.status.ingress[0].host
   rescue NoMethodError
-    pytest.skip()
+    pytest.skip("Could not determine metric route for #{provider.key}")
   end
   creds = provider.get_credentials_from_config(provider.key, cred_type: "token")
-  header = {"Authorization" => }
-  response = requests.get(, headers: header, verify: false)
+  header = {"Authorization" => "Bearer #{creds.token}"}
+  response = requests.get("https://#{metrics_url}:443", headers: header, verify: false)
   raise "{metrics} failed to start!".format(metrics: router["metadata"]["name"]) unless response.ok
 end
 def test_validate_metrics_collection_db(provider, enable_capacity_and_utilization, reduce_metrics_collection_threshold)

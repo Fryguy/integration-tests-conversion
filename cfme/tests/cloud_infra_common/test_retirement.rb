@@ -58,7 +58,7 @@ def verify_retirement_state(vm, *args)
   #           value of 'retired' will be used.
   #   
   view = navigate_to(vm, "Details")
-  raise unless wait_for(lambda{|| vm.is_retired}, delay: 5, num_sec: 15 * 60, fail_func: view.toolbar.reload.click, message: )
+  raise unless wait_for(lambda{|| vm.is_retired}, delay: 5, num_sec: 15 * 60, fail_func: view.toolbar.reload.click, message: "Wait for VM '#{vm.name}' to enter retired state")
   view = vm.load_details()
   power_states = is_bool(args) ? args.to_a : ["retired"]
   raise unless power_states.include?(view.entities.summary("Power Management").get_text_of("Power State"))
@@ -77,7 +77,7 @@ def verify_retirement_date(vm, expected_date: "Never")
   #   
   if is_bool(expected_date.is_a? Hash)
     expected_date["retire"] = Datetime::strptime(vm.retirement_date, vm.RETIRE_DATE_FMT)
-    logger.info(, expected_date["retire"], expected_date["start"], expected_date["end"])
+    logger.info("Asserting retirement date \"%s\" is between \"%s\" and \"%s\"", expected_date["retire"], expected_date["start"], expected_date["end"])
     raise unless (expected_date["start"] <= expected_date["retire"]) and (expected_date["retire"] <= expected_date["end"])
   else
     if is_bool(expected_date.is_a? datetime)
@@ -189,7 +189,7 @@ def test_set_retirement_date(create_vm, warn)
   view = create_vm.create_view(create_vm.DETAILS_VIEW_CLASS, wait: "5s")
   raise unless view.is_displayed
   msg_date = expected_date.strftime(create_vm.RETIRE_DATE_MSG_FMT)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Retirement date set to #{msg_date}")
   verify_retirement_date(create_vm, expected_date: expected_date)
 end
 def test_set_retirement_date_multiple(create_vms, provider, warn)
@@ -208,7 +208,7 @@ def test_set_retirement_date_multiple(create_vms, provider, warn)
   view = collection.create_view(navigator.get_class(collection, "All").VIEW, wait: "5s")
   raise unless view.is_displayed
   msg_date = expected_date.strftime(create_vms[0].RETIRE_DATE_MSG_FMT)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Retirement dates set to #{msg_date}")
   for vm in create_vms
     verify_retirement_date(vm, expected_date: expected_date)
   end
@@ -232,7 +232,7 @@ def test_set_retirement_offset(create_vm, warn)
   view = create_vm.create_view(create_vm.DETAILS_VIEW_CLASS, wait: "5s")
   raise unless view.is_displayed
   msg_dates = msg_date_range(expected_date, create_vm.RETIRE_DATE_MSG_FMT)
-  flash_regex = re.compile()
+  flash_regex = re.compile("^Retirement date set to (#{msg_dates})$")
   view.flash.assert_success_message(flash_regex)
   verify_retirement_date(create_vm, expected_date: expected_date)
 end
@@ -257,7 +257,7 @@ def test_set_retirement_offset_multiple(create_vms, provider, warn)
   view = collection.create_view(navigator.get_class(collection, "All").VIEW, wait: "5s")
   raise unless view.is_displayed
   msg_dates = msg_date_range(expected_date, create_vms[0].RETIRE_DATE_MSG_FMT)
-  flash_regex = re.compile()
+  flash_regex = re.compile("^Retirement dates set to (#{msg_dates})$")
   view.flash.assert_success_message(flash_regex)
   for vm in create_vms
     verify_retirement_date(vm, expected_date: expected_date)
@@ -277,7 +277,7 @@ def test_unset_retirement_date(create_vm)
   view = create_vm.create_view(create_vm.DETAILS_VIEW_CLASS, wait: "5s")
   raise unless view.is_displayed
   msg_date = retire_date.strftime(create_vm.RETIRE_DATE_MSG_FMT)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Retirement date set to #{msg_date}")
   verify_retirement_date(create_vm, expected_date: retire_date)
   create_vm.set_retirement_date(when: nil)
   view = create_vm.create_view(create_vm.DETAILS_VIEW_CLASS, wait: "5s")
@@ -310,7 +310,7 @@ def test_resume_retired_instance(create_vm, provider, remove_date)
   raise unless view.is_displayed
   if is_bool(retire_date)
     msg_date = retire_date.strftime(create_vm.RETIRE_DATE_MSG_FMT)
-    view.flash.assert_success_message()
+    view.flash.assert_success_message("Retirement date set to #{msg_date}")
   else
     view.flash.assert_success_message("Retirement date removed")
   end

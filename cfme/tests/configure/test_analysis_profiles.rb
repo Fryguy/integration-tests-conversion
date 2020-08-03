@@ -16,8 +16,8 @@ events_list = [{"Name" => "test-event", "Filter Message" => "test-msg", "Source"
 updated_files = [{"Name" => files_list[0]["Name"], "Collect Contents?" => !files_list[0]["Collect Contents?"]}]
 TENANT_NAME = fauxfactory.gen_alphanumeric(15, start: "tenant_")
 OPERATIONS = ["Add", "Edit", "Delete", "Copy"]
-PRODUCT_FEATURES_DIALOG = OPERATIONS.map{|op| ["Everything", "Automation", "Automate", "Customization", "Dialogs", "Modify"] + [op, ]}
-PRODUCT_FEATURES_QUOTA = ["My Company", TENANT_NAME].map{|tenant| ["Everything", "Settings", "Configuration", "Access Control", "Tenants", "Modify", "Manage Quotas"] + []}
+PRODUCT_FEATURES_DIALOG = OPERATIONS.map{|op| ["Everything", "Automation", "Automate", "Customization", "Dialogs", "Modify"] + [op, "#{op} (#{TENANT_NAME})"]}
+PRODUCT_FEATURES_QUOTA = ["My Company", TENANT_NAME].map{|tenant| ["Everything", "Settings", "Configuration", "Access Control", "Tenants", "Modify", "Manage Quotas"] + ["Manage Quotas (#{tenant})"]}
 def default_host_profile(analysis_profile_collection)
   return analysis_profile_collection.instantiate(name: "host sample", description: "Host Sample", profile_type: analysis_profile_collection.HOST_TYPE)
 end
@@ -37,27 +37,27 @@ def test_vm_analysis_profile_crud(appliance, soft_assert, analysis_profile_colle
   vm_profile = analysis_profile_collection.create(name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), profile_type: analysis_profile_collection.VM_TYPE, files: files_list, categories: categories_list, registry: registry_list, events: events_list)
   view = appliance.browser.create_view(navigator.get_class(analysis_profile_collection, "All").VIEW)
   vm_flash = (appliance.version < "5.10") ? vm_profile.name : vm_profile.description
-  view.flash.assert_message()
+  view.flash.assert_message("Analysis Profile \"#{vm_flash}\" was saved")
   raise unless vm_profile.exists
   update(vm_profile) {
     vm_profile.files = updated_files
   }
   view = appliance.browser.create_view(navigator.get_class(vm_profile, "Details").VIEW)
-  view.flash.assert_success_message()
-  soft_assert.(vm_profile.files == updated_files, )
+  view.flash.assert_success_message("Analysis Profile \"#{vm_flash}\" was saved")
+  soft_assert.(vm_profile.files == updated_files, "Files update failed on profile: #{vm_profile.name}, #{vm_profile.files}")
   update(vm_profile) {
     vm_profile.categories = ["System"]
   }
-  soft_assert.(vm_profile.categories == ["System"], )
-  copied_profile = vm_profile.copy(new_name: )
+  soft_assert.(vm_profile.categories == ["System"], "Categories update failed on profile: #{vm_profile.name}")
+  copied_profile = vm_profile.copy(new_name: "copied-#{vm_profile.name}")
   view = appliance.browser.create_view(navigator.get_class(analysis_profile_collection, "All").VIEW)
   vm_copied_flash = (appliance.version < "5.10") ? copied_profile.name : copied_profile.description
-  view.flash.assert_message()
+  view.flash.assert_message("Analysis Profile \"#{vm_copied_flash}\" was saved")
   raise unless copied_profile.exists
   copied_profile.delete()
   raise unless !copied_profile.exists
   vm_profile.delete()
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Analysis Profile \"#{vm_flash}\": Delete successful")
   raise unless !vm_profile.exists
 end
 def test_host_analysis_profile_crud(appliance, soft_assert, analysis_profile_collection)
@@ -72,21 +72,21 @@ def test_host_analysis_profile_crud(appliance, soft_assert, analysis_profile_col
   host_profile = analysis_profile_collection.create(name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), profile_type: analysis_profile_collection.HOST_TYPE, files: files_list, events: events_list)
   view = appliance.browser.create_view(navigator.get_class(analysis_profile_collection, "All").VIEW)
   host_flash = (appliance.version < "5.10") ? host_profile.name : host_profile.description
-  view.flash.assert_message()
+  view.flash.assert_message("Analysis Profile \"#{host_flash}\" was saved")
   raise unless host_profile.exists
   update(host_profile) {
     host_profile.files = updated_files
   }
   soft_assert.(host_profile.files == updated_files, "Files update failed on profile: {}, {}".format(host_profile.name, host_profile.files))
-  copied_profile = host_profile.copy(new_name: )
+  copied_profile = host_profile.copy(new_name: "copied-#{host_profile.name}")
   view = appliance.browser.create_view(navigator.get_class(analysis_profile_collection, "All").VIEW)
   host_copied_flash = (appliance.version < "5.10") ? copied_profile.name : copied_profile.description
-  view.flash.assert_message()
+  view.flash.assert_message("Analysis Profile \"#{host_copied_flash}\" was saved")
   raise unless copied_profile.exists
   copied_profile.delete()
   raise unless !copied_profile.exists
   host_profile.delete()
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Analysis Profile \"#{host_flash}\": Delete successful")
   raise unless !host_profile.exists
 end
 def test_vmanalysis_profile_description_validation(analysis_profile_collection)

@@ -52,7 +52,7 @@ def new_zone(appliance)
   zone = zone_collection.create(name: fauxfactory.gen_alphanumeric(5), description: fauxfactory.gen_alphanumeric(8))
   server_settings = appliance.server.settings
   server_settings.update_basic_information({"appliance_zone" => zone.name})
-  yield zone
+  yield(zone)
   server_settings.update_basic_information({"appliance_zone" => "default"})
   zone.delete()
 end
@@ -140,7 +140,7 @@ def test_embedded_ansible_credential_crud(credentials_collection, wait_for_ansib
   #       initialEstimate: 1/6h
   #       tags: ansible_embed
   #   
-  credential = credentials_collection.create(, credential_type, None: credentials)
+  credential = credentials_collection.create("#{credential_type}_credential_#{fauxfactory.gen_alpha()}", credential_type, None: credentials)
   updated_value = fauxfactory.gen_alpha(15, start: "edited_")
   update(credential) {
     if credential.credential_type == "Google Compute Engine"
@@ -183,7 +183,7 @@ def test_embed_tower_playbooks_list_changed(appliance, wait_for_ansible)
   repositories_collection = appliance.collections.ansible_repositories
   for repo_url in REPOSITORIES
     repository = repositories_collection.create(fauxfactory.gen_alpha(start: "repo_"), repo_url, description: fauxfactory.gen_alpha(15, start: "repo_desc_"))
-    playbooks.push()
+    playbooks.push(repository.playbooks.all().map{|playbook| playbook.name}.to_set)
     repository.delete()
   end
   raise unless !Set.new(playbooks[1]).issuperset(Set.new(playbooks[0]))

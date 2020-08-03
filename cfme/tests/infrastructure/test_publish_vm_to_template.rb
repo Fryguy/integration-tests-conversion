@@ -29,7 +29,7 @@ def vm_crud(provider)
     pytest.skip("Skipping as small_template could not be found on the provider")
   end
   vm.wait_to_appear(timeout: 900, load_details: false)
-  yield vm
+  yield(vm)
   begin
     vm.cleanup_on_provider()
   rescue Exception

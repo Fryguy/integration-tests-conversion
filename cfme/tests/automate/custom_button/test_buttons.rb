@@ -38,7 +38,7 @@ pytestmark = [test_requirements.custom_button, pytest.mark.usefixtures("uses_inf
 def button_group(appliance, obj_type)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(start: "hover_"), type: collection.getattr(obj_type))
-  yield button_gp
+  yield(button_gp)
   button_gp.delete_if_exists()
 end
 def test_button_group_crud(request, appliance, obj_type)
@@ -65,14 +65,14 @@ def test_button_group_crud(request, appliance, obj_type)
   buttongroup = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(start: "hov_"), icon_color: "#ff0000", type: collection.getattr(obj_type, nil))
   request.addfinalizer(buttongroup.delete_if_exists)
   view = buttongroup.create_view(ButtonGroupObjectTypeView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Button Group \"#{buttongroup.hover}\" was added")
   raise unless buttongroup.exists
   view = navigate_to(buttongroup, "Details")
   raise unless view.text.text == buttongroup.text
   raise unless view.hover.text == buttongroup.hover
   view = navigate_to(buttongroup, "Edit")
   view.cancel_button.click()
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Edit of Button Group \"#{buttongroup.text}\" was cancelled by the user")
   raise unless buttongroup.exists
   updated_text = fauxfactory.gen_alphanumeric(15, start: "edited_grp_")
   updated_hover = fauxfactory.gen_alphanumeric(15, start: "edited_hvr_")
@@ -81,7 +81,7 @@ def test_button_group_crud(request, appliance, obj_type)
     buttongroup.hover = updated_hover
   }
   buttongroup.create_view(ButtonGroupDetailView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Button Group \"#{updated_hover}\" was saved")
   raise unless buttongroup.exists
   view = navigate_to(buttongroup, "Details")
   raise unless view.text.text == updated_text
@@ -91,7 +91,7 @@ def test_button_group_crud(request, appliance, obj_type)
   raise unless buttongroup.exists
   buttongroup.delete()
   view = buttongroup.create_view(ButtonGroupObjectTypeView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Button Group \"#{buttongroup.hover}\": Delete successful")
   raise unless !buttongroup.exists
 end
 def test_button_crud(appliance, dialog, request, button_group, obj_type)
@@ -121,7 +121,7 @@ def test_button_crud(appliance, dialog, request, button_group, obj_type)
   button = button_group.buttons.create(text: fauxfactory.gen_alphanumeric(start: "btn_"), hover: fauxfactory.gen_alphanumeric(start: "hvr_"), icon_color: "#ff0000", dialog: dialog, system: "Request", request: "InspectMe")
   request.addfinalizer(button.delete_if_exists)
   view = button_group.create_view(ButtonGroupDetailView, wait: "10s")
-  view.flash.assert_message()
+  view.flash.assert_message("Custom Button \"#{button.hover}\" was added")
   raise unless button.exists
   view = navigate_to(button, "Details")
   raise unless view.text.text == button.text
@@ -130,7 +130,7 @@ def test_button_crud(appliance, dialog, request, button_group, obj_type)
   raise unless view.request.text == button.request
   view = navigate_to(button, "Edit")
   view.cancel_button.click()
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Edit of Custom Button \"#{button.text}\" was cancelled by the user")
   edited_text = fauxfactory.gen_alphanumeric(15, start: "edit_btn_")
   edited_hover = fauxfactory.gen_alphanumeric(15, start: "edit_hvr_")
   edited_request = fauxfactory.gen_alphanumeric(15, start: "edit_req_")
@@ -141,7 +141,7 @@ def test_button_crud(appliance, dialog, request, button_group, obj_type)
     button.request = edited_request
   }
   view = button.create_view(ButtonDetailView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Custom Button \"#{button.hover}\" was saved")
   raise unless button.exists
   view = navigate_to(button, "Details")
   raise unless view.text.text == edited_text
@@ -153,7 +153,7 @@ def test_button_crud(appliance, dialog, request, button_group, obj_type)
   raise unless button.exists
   button.delete()
   view = button_group.create_view(ButtonGroupDetailView, wait: "10s")
-  view.flash.assert_message()
+  view.flash.assert_message("Button \"#{button.hover}\": Delete successful")
   raise unless !button.exists
 end
 def test_button_avp_displayed(appliance, dialog, request)
@@ -365,7 +365,7 @@ def test_custom_button_order_sort(appliance, request, provider, setup_provider, 
   unassigned_gp = appliance.collections.button_groups.instantiate(text: "[Unassigned Buttons]", hover: "Unassigned buttons", type: btn_type)
   buttons = []
   for ind in 0.upto(4-1)
-    button = unassigned_gp.buttons.create(text: fauxfactory.gen_alphanumeric(start: ), hover: fauxfactory.gen_alphanumeric(15, start: ), system: "Request", request: "InspectMe")
+    button = unassigned_gp.buttons.create(text: fauxfactory.gen_alphanumeric(start: "btn_#{ind}_"), hover: fauxfactory.gen_alphanumeric(15, start: "btn_hvr_#{ind}_"), system: "Request", request: "InspectMe")
     buttons.push(button)
   end
   _clean = lambda do
@@ -541,10 +541,10 @@ def test_under_group_multiple_button_crud(appliance, obj_type, button_group, dia
   for exp in ["enablement", "visibility"]
     expression = {"exp" => {"tag" => "My Company Tags : Department", "value" => "Engineering"}}
     button = button_group.buttons.create(text: fauxfactory.gen_alphanumeric(start: "btn_"), hover: fauxfactory.gen_alphanumeric(start: "hover_"), dialog: dialog, system: "Request", request: "InspectMe", None: expression)
-    view.flash.assert_message()
+    view.flash.assert_message("Custom Button \"#{button.hover}\" was added")
     raise unless button.exists
     button.delete()
-    view.flash.assert_message()
+    view.flash.assert_message("Button \"#{button.hover}\": Delete successful")
     raise unless !button.exists
     raise unless button_group.exists
   end

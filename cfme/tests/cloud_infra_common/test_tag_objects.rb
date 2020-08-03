@@ -54,10 +54,10 @@ def tagging_check(tag, request)
     #     
     test_item.add_tag(tag: tag, details: tag_place)
     tags = test_item.get_tags()
-    raise  unless tags.include?(tag)
+    raise "#{tag.category.display_name}: #{tag.display_name} not in (#{tags})" unless tags.include?(tag)
     test_item.remove_tag(tag: tag, details: tag_place)
     tags = test_item.get_tags()
-    raise  unless !tags.include?(tag)
+    raise "#{tag.category.display_name}: #{tag.display_name} in (#{tags})" unless !tags.include?(tag)
     request.addfinalizer(lambda{|| tag_cleanup(test_item, tag)})
   end
   return _tagging_check
@@ -76,7 +76,7 @@ def tag_out_of_10k_values(appliance)
   raise unless values.success
   category = appliance.collections.categories.instantiate(category_name)
   tag = category.collections.tags.instantiate(name: "9786", display_name: "9786")
-  yield tag
+  yield(tag)
   remove = appliance.ssh_client.run_rails_console("10000.times { |i| Classification.first.entries.last.delete }")
   raise unless remove.success
 end

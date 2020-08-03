@@ -56,7 +56,7 @@ def test_myservice_crud(appliance, setup_provider, context, order_service)
   appliance.context.use(context) {
     my_service = MyService(appliance, catalog_item.name)
     my_service.set_ownership("Administrator", "EvmGroup-approver")
-    my_service.update({"description" => })
+    my_service.update({"description" => "#{catalog_item.name}_edited"})
     my_service.edit_tags("Cost Center", "Cost Center 002")
     my_service.delete()
   }
@@ -258,7 +258,7 @@ def test_service_dynamic_dialog_execution(appliance, request, custom_instance)
         ")
   instance = custom_instance.(ruby_code: code)
   raise unless instance.exists
-  matched_patterns = [, "MIQ_OK"]
+  matched_patterns = ["System/Request/#{instance.fields["meth1"]["value"]}", "MIQ_OK"]
   service_dialog = appliance.collections.service_dialogs
   dialog = fauxfactory.gen_alphanumeric(12, start: "dialog_")
   ele_name = fauxfactory.gen_alphanumeric(start: "ele_")

@@ -15,7 +15,7 @@ def catalog_item(appliance, request, provider, ansible_tower_dialog, catalog, jo
   config_manager_obj = provider
   provider_name = config_manager_obj.data.get("name")
   template = config_manager_obj.data["provisioning_data"][job_type]
-  catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ANSIBLE_TOWER, name: ansible_tower_dialog.label, description: "my catalog", display_in: true, catalog: catalog, dialog: ansible_tower_dialog, provider: , config_template: template)
+  catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ANSIBLE_TOWER, name: ansible_tower_dialog.label, description: "my catalog", display_in: true, catalog: catalog, dialog: ansible_tower_dialog, provider: "#{provider_name} Automation Manager", config_template: template)
   request.addfinalizer(catalog_item.delete)
   return catalog_item
 end
@@ -45,7 +45,7 @@ def test_order_tower_catalog_item(appliance, provider, catalog_item, request, jo
   cells = {"Description" => catalog_item.name}
   order_request = appliance.collections.requests.instantiate(cells: cells, partial_check: true)
   order_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{order_request.row.last_message.text}"
   raise msg unless order_request.is_succeeded(method: "ui")
   appliance.user.my_settings.default_views.set_default_view("Configuration Management Providers", "List View")
 end
@@ -66,7 +66,7 @@ def test_retire_ansible_service(appliance, catalog_item, request, job_type, ansi
   cells = {"Description" => catalog_item.name}
   order_request = appliance.collections.requests.instantiate(cells: cells, partial_check: true)
   order_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{order_request.row.last_message.text}"
   raise msg unless order_request.is_succeeded(method: "ui")
   myservice = MyService(appliance, catalog_item.name)
   myservice.retire()

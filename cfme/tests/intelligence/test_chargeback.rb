@@ -37,7 +37,7 @@ def chargeback_rate(appliance, rate_resource, rate_type, rate_action)
       rate = appliance.collections.storage_rates.create(description: rate_description, fields: {"Fixed Storage Cost 1" => random_per_time(fixed_rate: "100"), "Fixed Storage Cost 2" => random_per_time(fixed_rate: "300"), "Allocated Disk Storage" => random_per_time(None: rate_values[0]), "Used Disk Storage" => random_per_time(None: rate_values[1])})
     end
   end
-  yield rate
+  yield(rate)
   rate.delete_if_exists()
 end
 def test_chargeback_duplicate_disallowed(chargeback_rate, rate_resource, rate_type, rate_action, appliance)
@@ -74,16 +74,16 @@ def test_chargeback_rate(rate_resource, rate_type, rate_action, request, chargeb
   #   
   cb_rate = chargeback_rate
   view = cb_rate.create_view(navigator.get_class(cb_rate.parent, "All").VIEW, wait: 10)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Chargeback Rate \"#{cb_rate.description}\" was added")
   raise unless cb_rate.exists
   if rate_action == "delete"
     cb_rate.delete()
-    view.flash.assert_success_message()
+    view.flash.assert_success_message("Chargeback Rate \"#{cb_rate.description}\": Delete successful")
     raise unless !cb_rate.exists
   end
   if rate_action == "edit"
     update(cb_rate) {
-      cb_rate.description = 
+      cb_rate.description = "#{cb_rate.description}_edited"
       if rate_resource == "compute"
         cb_rate.fields = {"Fixed Compute Cost 1" => random_per_time(fixed_rate: "500"), "Allocated CPU Count" => random_per_time(fixed_rate: "100")}
       else
@@ -93,7 +93,7 @@ def test_chargeback_rate(rate_resource, rate_type, rate_action, request, chargeb
       end
     }
     view = cb_rate.create_view(navigator.get_class(cb_rate, "Details").VIEW, wait: 10)
-    view.flash.assert_success_message()
+    view.flash.assert_success_message("Chargeback Rate \"#{cb_rate.description}\" was saved")
     raise unless cb_rate.exists
   end
 end

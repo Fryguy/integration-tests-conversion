@@ -265,7 +265,7 @@ def test_provider_rhv_create_delete_tls(request, has_no_providers, provider, ver
     endpoints["default"].verify_tls = false
     endpoints["default"].ca_certs = nil
     prov.endpoints = endpoints
-    prov.name = 
+    prov.name = "#{provider.name}-no-tls"
   end
   prov.create()
   prov.validate_stats(ui: true)
@@ -326,11 +326,11 @@ def test_rhv_custom_attributes_after_refresh(appliance, setup_provider, provider
   #   
   view = navigate_to(provider, "ProviderVms")
   vm_name = view.entities.all_entity_names[0]
-  vm = 
-  raise unless appliance.ssh_client.run_rails_console().success
-  raise unless appliance.ssh_client.run_rails_console().output.include?("myval")
-  raise unless appliance.ssh_client.run_rails_console().success
-  raise unless appliance.ssh_client.run_rails_console().output.include?("myval")
+  vm = "Vm.where(name: '#{vm_name}').last"
+  raise unless appliance.ssh_client.run_rails_console("#{vm}.miq_custom_set('mykey', 'myval')").success
+  raise unless appliance.ssh_client.run_rails_console("#{vm}.miq_custom_get('mykey')").output.include?("myval")
+  raise unless appliance.ssh_client.run_rails_console("EmsRefresh.refresh(#{vm})").success
+  raise unless appliance.ssh_client.run_rails_console("#{vm}.miq_custom_get('mykey')").output.include?("myval")
 end
 def test_infrastructure_add_provider_trailing_whitespaces(appliance)
   # Test to validate the hostname and username should be without whitespaces
@@ -397,7 +397,7 @@ def test_infra_discovery_screen(appliance)
 end
 def setup_provider_min_templates(request, appliance, provider, min_templates)
   if provider.mgmt.list_templates().size < min_templates
-    pytest.skip()
+    pytest.skip("Number of templates on #{provider} does not meet minimum for test parameter #{min_templates}, skipping and not setting up provider")
   end
   setup_or_skip(request, provider)
 end

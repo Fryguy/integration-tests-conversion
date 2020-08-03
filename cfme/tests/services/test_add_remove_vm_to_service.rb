@@ -15,7 +15,7 @@ def new_vm(appliance, provider, setup_provider, small_template_modscope)
   collection = appliance.provider_based_collection(provider)
   vm = collection.instantiate(vm_name, provider, small_template_modscope.name)
   vm.create_on_provider(find_in_cfme: true, timeout: 700, allow_skip: "default")
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
   provider.refresh_provider_relationships()
 end

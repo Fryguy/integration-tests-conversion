@@ -52,7 +52,7 @@ def test_ocp_operator_out_of_the_box(appliance)
   view = navigate_to(roles_collection, "All")
   role_name_prefix = "container_operator"
   is_role_found = bool(view.table.rows().select{|row| row.name.text.downcase().include?(role_name_prefix)}.map{|row| row})
-  raise  unless is_role_found
+  raise "No #{role_name_prefix} found" unless is_role_found
 end
 def test_pause_and_resume_provider(provider)
   # 

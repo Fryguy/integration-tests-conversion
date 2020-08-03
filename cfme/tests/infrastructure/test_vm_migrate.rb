@@ -23,7 +23,7 @@ def new_vm(setup_provider, provider)
   if is_bool(!provider.mgmt.does_vm_exist(vm_name))
     vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   end
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def test_vm_migrate(appliance, new_vm, provider)
@@ -50,7 +50,7 @@ def test_vm_migrate(appliance, new_vm, provider)
   cells = {"Description" => request_description, "Request Type" => "Migrate"}
   migrate_request = appliance.collections.requests.instantiate(request_description, cells: cells, partial_check: true)
   migrate_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{migrate_request.row.last_message.text}"
   raise msg unless migrate_request.is_succeeded(method: "ui")
 end
 def test_vm_migrate_should_create_notifications_when_migrations_fail(appliance, create_vm, provider)

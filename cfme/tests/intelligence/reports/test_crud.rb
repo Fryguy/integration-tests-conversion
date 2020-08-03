@@ -53,7 +53,7 @@ def schedule_data(request)
 end
 def get_custom_report(appliance, custom_report_values)
   custom_report = appliance.collections.reports.create(None: custom_report_values)
-  yield custom_report
+  yield(custom_report)
   custom_report.delete()
 end
 def test_custom_report_crud(custom_report_values, appliance, request)
@@ -94,7 +94,7 @@ def test_reports_schedule_crud(schedule_data, appliance, request)
   schedule = appliance.collections.schedules.create(None: schedule_data)
   request.addfinalizer(schedule.delete_if_exists)
   view = schedule.create_view(ScheduleDetailsView)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Schedule \"#{schedule.name}\" was added")
   date = datetime.datetime.today() + datetime.timedelta(5)
   updated_description = "badger badger badger"
   updated_timer = {"run" => "Monthly", "starting_date" => date}
@@ -102,7 +102,7 @@ def test_reports_schedule_crud(schedule_data, appliance, request)
     schedule.description = updated_description
     schedule.timer = updated_timer
   }
-  view.flash.assert_message()
+  view.flash.assert_message("Schedule \"#{schedule.name}\" was saved")
   raise unless view.schedule_info.get_text_of("Description") == updated_description
   run_at = view.schedule_info.get_text_of("Run At")
   raise unless run_at.include?(updated_timer["run"].downcase())
@@ -110,7 +110,7 @@ def test_reports_schedule_crud(schedule_data, appliance, request)
   schedule.queue()
   view.flash.assert_message("The selected Schedule has been queued to run")
   schedule.delete()
-  view.flash.assert_message()
+  view.flash.assert_message("Schedule #{schedule.name} was deleted")
 end
 def test_menuwidget_crud(appliance, request)
   # 
@@ -127,7 +127,7 @@ def test_menuwidget_crud(appliance, request)
   w = appliance.collections.dashboard_report_widgets.create(appliance.collections.dashboard_report_widgets.MENU, fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), active: true, shortcuts: {"Services / Catalogs" => fauxfactory.gen_alphanumeric(), "Overview / Dashboard" => fauxfactory.gen_alphanumeric()}, visibility: "<To All Users>")
   request.addfinalizer(w.delete_if_exists)
   view = w.create_view(AllDashboardWidgetsView)
-  view.flash.assert_message()
+  view.flash.assert_message("Widget \"#{w.title}\" was saved")
   update(w) {
     w.active = false
   }
@@ -147,7 +147,7 @@ def test_reportwidget_crud(appliance, request)
   w = appliance.collections.dashboard_report_widgets.create(appliance.collections.dashboard_report_widgets.REPORT, fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), active: true, filter: ["Events", "Operations", "Operations VMs Powered On/Off for Last Week"], columns: ["VM Name", "Message"], rows: "10", timer: {"run" => "Hourly", "hours" => "Hour"}, visibility: "<To All Users>")
   request.addfinalizer(w.delete_if_exists)
   view = w.create_view(AllDashboardWidgetsView)
-  view.flash.assert_message()
+  view.flash.assert_message("Widget \"#{w.title}\" was saved")
   update(w) {
     w.active = false
   }
@@ -164,7 +164,7 @@ def test_chartwidget_crud(appliance, request)
   w = appliance.collections.dashboard_report_widgets.create(appliance.collections.dashboard_report_widgets.CHART, fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), active: true, filter: "Configuration Management/Virtual Machines/Vendor and Guest OS", timer: {"run" => "Hourly", "hours" => "Hour"}, visibility: "<To All Users>")
   request.addfinalizer(w.delete_if_exists)
   view = w.create_view(AllDashboardWidgetsView)
-  view.flash.assert_message()
+  view.flash.assert_message("Widget \"#{w.title}\" was saved")
   update(w) {
     w.active = false
   }
@@ -181,7 +181,7 @@ def test_rssfeedwidget_crud(appliance, request)
   w = appliance.collections.dashboard_report_widgets.create(appliance.collections.dashboard_report_widgets.RSS, fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), active: true, type: "Internal", feed: "Administrative Events", rows: "8", visibility: "<To All Users>")
   request.addfinalizer(w.delete_if_exists)
   view = w.create_view(AllDashboardWidgetsView)
-  view.flash.assert_message()
+  view.flash.assert_message("Widget \"#{w.title}\" was saved")
   update(w) {
     w.active = false
   }
@@ -233,7 +233,7 @@ def test_run_report(appliance)
   rest_running_report_finishes = lambda do
     response.task.reload()
     if response.task.status.downcase().include?("error")
-      pytest.fail()
+      pytest.fail("Error when running report: `#{response.task.message}`")
     end
     return response.task.state.downcase() == "finished"
   end
@@ -256,12 +256,12 @@ def test_import_report_rest(appliance, request)
     report = appliance.collections.reports.instantiate(type: "My Company (All Groups)", subtype: "Custom", menu_name: menu_name)
     report.delete_if_exists()
   end
-  raise unless response["message"] == 
+  raise unless response["message"] == "Imported Report: [#{menu_name}]"
   report = appliance.rest_api.collections.reports.get(name: menu_name)
   raise unless report.name == menu_name
   response, = appliance.rest_api.collections.reports.action.execute_action("import", data)
   assert_response(appliance)
-  raise unless response["message"] == 
+  raise unless response["message"] == "Skipping Report (already in DB): [#{menu_name}]"
 end
 def test_reports_delete_saved_report(appliance, request)
   # The test case selects reports from the Saved Reports list and deletes them.

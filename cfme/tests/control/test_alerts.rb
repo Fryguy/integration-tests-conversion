@@ -56,7 +56,7 @@ def wait_for_alert(smtp, alert, delay: nil, additional_checks: nil)
   additional_checks = additional_checks || {}
   _mail_arrived = lambda do
     for mail in smtp.get_emails()
-      if mail["subject"].include?()
+      if mail["subject"].include?("Alert Triggered: #{alert.description}")
         if is_bool(!additional_checks)
           return true
         else
@@ -89,7 +89,7 @@ def setup_for_alerts(appliance)
     #         vm_name: VM name to use for policy filtering
     #         provider: funcarg provider
     #     
-    alert_profile = appliance.collections.alert_profiles.create(alert_profiles.VMInstanceAlertProfile, , alerts: alerts_list)
+    alert_profile = appliance.collections.alert_profiles.create(alert_profiles.VMInstanceAlertProfile, "Alert profile for #{vm_name}", alerts: alerts_list)
     request.addfinalizer(alert_profile.delete)
     view = appliance.browser.create_view(AlertProfileDetailsView)
     if is_bool(alert_profile.assign_to("The Enterprise"))
@@ -98,11 +98,11 @@ def setup_for_alerts(appliance)
       view.flash.assert_message("Edit Alert Profile assignments cancelled by user")
     end
     if !event.equal?(nil)
-      action = appliance.collections.actions.create(, "Evaluate Alerts", action_values: {"alerts_to_evaluate" => alerts_list.map{|alert| alert.to_s}})
+      action = appliance.collections.actions.create("Evaluate Alerts for #{vm_name}", "Evaluate Alerts", action_values: {"alerts_to_evaluate" => alerts_list.map{|alert| alert.to_s}})
       request.addfinalizer(action.delete)
-      policy = appliance.collections.policies.create(policies.VMControlPolicy, , scope: )
+      policy = appliance.collections.policies.create(policies.VMControlPolicy, "Evaluate Alerts policy for #{vm_name}", scope: "fill_field(VM and Instance : Name, INCLUDES, #{vm_name})")
       request.addfinalizer(policy.delete)
-      policy_profile = appliance.collections.policy_profiles.create(, policies: [policy])
+      policy_profile = appliance.collections.policy_profiles.create("Policy profile for #{vm_name}", policies: [policy])
       request.addfinalizer(policy_profile.delete)
       policy.assign_actions_to_event(event, [action])
       provider.assign_policy_profiles(policy_profile.description)
@@ -131,7 +131,7 @@ def wait_candu(create_vm)
 end
 def ssh(provider, full_template, create_vm)
   SSHClient(username: credentials[full_template.creds]["username"], password: credentials[full_template.creds]["password"], hostname: create_vm.mgmt.ip) {|ssh_client|
-    yield ssh_client
+    yield(ssh_client)
   }
 end
 def setup_snmp(appliance)
@@ -223,7 +223,7 @@ def test_alert_timeline_cpu(request, appliance, create_vm, set_performance_captu
     end
   end
   if __dummy0__
-    pytest.fail()
+    pytest.fail("The event has not been found on the timeline. Event list: #{events}")
   end
 end
 def test_alert_snmp(request, appliance, provider, setup_snmp, setup_candu, create_vm, wait_candu, setup_for_alerts)
@@ -240,11 +240,11 @@ def test_alert_snmp(request, appliance, provider, setup_snmp, setup_candu, creat
   #       initialEstimate: 1/6h
   #   
   match_string = fauxfactory.gen_alpha(length: 8)
-  alert = appliance.collections.alerts.create(fauxfactory.gen_alpha(length: 20, start: "Trigger by CPU "), active: true, based_on: "VM and Instance", evaluate: ["Real Time Performance", {"performance_field" => "CPU - % Used", "performance_field_operator" => ">=", "performance_field_value" => "0", "performance_trend" => "Don't Care", "performance_time_threshold" => "3 Minutes"}], notification_frequency: "1 Minute", snmp_trap: {"hosts" => "127.0.0.1", "version" => "v2", "id" => "info", "traps" => [["1.2.3", "OctetString", ]]})
+  alert = appliance.collections.alerts.create(fauxfactory.gen_alpha(length: 20, start: "Trigger by CPU "), active: true, based_on: "VM and Instance", evaluate: ["Real Time Performance", {"performance_field" => "CPU - % Used", "performance_field_operator" => ">=", "performance_field_value" => "0", "performance_trend" => "Don't Care", "performance_time_threshold" => "3 Minutes"}], notification_frequency: "1 Minute", snmp_trap: {"hosts" => "127.0.0.1", "version" => "v2", "id" => "info", "traps" => [["1.2.3", "OctetString", "#{match_string}"]]})
   request.addfinalizer(alert.delete)
   setup_for_alerts.(request, [alert])
   _snmp_arrived = lambda do
-    result = appliance.ssh_client.run_command()
+    result = appliance.ssh_client.run_command("journalctl --no-pager /usr/sbin/snmptrapd | grep #{match_string}")
     if is_bool(result.failed)
       return false
     else

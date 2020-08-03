@@ -113,6 +113,6 @@ def test_project_has_provider(appliance, soft_assert, provider)
   for row in all_tables_rows
     curr_project_name = row.data["name"]
     curr_project_provider = row.data["provider"]
-    soft_assert.(curr_project_provider, )
+    soft_assert.(curr_project_provider, "No Provider found for project #{curr_project_name}")
   end
 end

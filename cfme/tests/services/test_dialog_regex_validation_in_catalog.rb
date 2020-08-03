@@ -23,7 +23,7 @@ def dialog_cat_item(appliance, catalog, request)
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   box.elements.create(element_data: [element_data])
   catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: "my catalog", display_in: true, catalog: catalog, dialog: sd)
-  yield [catalog_item, element_data, sd]
+  yield([catalog_item, element_data, sd])
   if is_bool(catalog_item.exists)
     catalog_item.delete()
   end
@@ -97,7 +97,7 @@ def test_dialog_regex_validation_button(appliance, dialog_cat_item)
   view = navigate_to(service_catalogs, "Order")
   view.fields(ele_name).fill("a")
   element = view.fields(ele_name).input
-  msg = 
+  msg = "Entered text should match the format: #{element_data["options"]["validation"]}"
   raise unless element.warning == msg
   Wait_for::wait_for(lambda{|| view.submit_button.disabled}, timeout: 10)
   view.fields(ele_name).fill("")
@@ -152,7 +152,7 @@ def test_regex_dialog_disabled_validation(appliance, catalog, request)
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
   view = navigate_to(service_catalogs, "Order")
   input_data_list = [fauxfactory.gen_alpha(length: 3), fauxfactory.gen_number(), fauxfactory.gen_special(length: 5), fauxfactory.gen_alphanumeric(length: 5)]
-  msg = 
+  msg = "Entered text should match the format: #{element_data["options"]["validation"]}"
   for input_data in input_data_list
     logger.info("Entering input data: %s " % input_data)
     view.fields(ele_name).fill(input_data)

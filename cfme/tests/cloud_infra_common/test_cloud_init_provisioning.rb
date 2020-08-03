@@ -94,7 +94,7 @@ def test_provision_cloud_init(appliance, request, setup_provider, provider, prov
   if is_bool(provider.one_of(InfraProvider) && appliance.version > "5.9")
     inst_args["customize"]["customize_type"] = "Specification"
   end
-  logger.info()
+  logger.info("Instance args: #{inst_args}")
   collection = appliance.provider_based_collection(provider)
   instance = collection.create(vm_name, provider, form_values: inst_args)
   request.addfinalizer(instance.cleanup_on_provider)
@@ -130,7 +130,7 @@ def test_provision_cloud_init_payload(appliance, request, setup_provider, provid
   ci_payload = {"root_password" => "mysecret", "address_mode" => "Static", "hostname" => "cimachine", "ip_address" => "169.254.0.1", "subnet_mask" => "29", "gateway" => "169.254.0.2", "dns_servers" => "169.254.0.3", "dns_suffixes" => "virt.lab.example.com", "custom_template" => {"name" => "oVirt cloud-init"}}
   inst_args = {"request" => {"notes" => note}, "customize" => {"customize_type" => "Specification"}, "template_name" => image}
   inst_args["customize"].update(ci_payload)
-  logger.info()
+  logger.info("Instance args: #{inst_args}")
   collection = appliance.provider_based_collection(provider)
   instance = collection.create(vm_name, provider, form_values: inst_args)
   request.addfinalizer(instance.cleanup_on_provider)
@@ -138,7 +138,7 @@ def test_provision_cloud_init_payload(appliance, request, setup_provider, provid
   check_all_tabs(provision_request, provider)
   provision_request.wait_for_request()
   connect_ip = wait_for(method(:find_global_ipv6), func_args: [instance], num_sec: 600, delay: 20).out
-  logger.info()
+  logger.info("Connect IP: #{connect_ip}")
   ssh.SSHClient(hostname: connect_ip, username: "root", password: ci_payload["root_password"]) {|ssh_client|
     hostname_cmd = ssh_client.run_command("hostname")
     raise unless hostname_cmd.success

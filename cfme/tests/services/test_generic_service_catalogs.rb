@@ -70,7 +70,7 @@ def test_service_generic_catalog_bundle(appliance, catalog_item)
   request_description = bundle_name
   provision_request = appliance.collections.requests.instantiate(request_description, partial_check: true)
   provision_request.wait_for_request()
-  msg = 
+  msg = "Request failed with the message #{provision_request.rest.message}"
   raise msg unless provision_request.is_succeeded()
 end
 def test_delete_dialog_before_parent_item(appliance, catalog_item)

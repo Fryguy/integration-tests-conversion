@@ -94,7 +94,7 @@ def provisioner(appliance, request, setup_provider, provider, vm_name)
     base_view = vm.appliance.browser.create_view(BaseLoggedInPage)
     base_view.flash.assert_no_error()
     request.addfinalizer(lambda{|| vm.cleanup_on_provider()})
-    request_description = 
+    request_description = "Provision from [#{template}] to [#{vm_name}]"
     provision_request = appliance.collections.requests.instantiate(description: request_description)
     check_all_tabs(provision_request, provider)
     if !delayed.equal?(nil)
@@ -110,7 +110,7 @@ def provisioner(appliance, request, setup_provider, provider, vm_name)
     wait_for(provider.mgmt.does_vm_exist, [vm_name], fail_func: provider.refresh_provider_relationships, handle_exception: true, num_sec: 600)
     logger.info("Waiting for cfme provision request for vm %s", method(:vm_name))
     provision_request.wait_for_request()
-    msg = 
+    msg = "Provisioning failed with the message #{provision_request.rest.message}"
     raise msg unless provision_request.is_succeeded()
     return vm
   end
@@ -259,7 +259,7 @@ def test_tag(provisioner, prov_data, provider, vm_name)
   prov_data["purpose"]["apply_tags"] = CbTree.CheckNode(path: ["Service Level *", "Gold"])
   vm = provisioner.(prov_source(provider), prov_data)
   tags = vm.get_tags()
-  raise  unless tags.map{|tag| tag.category.display_name == "Service Level" && tag.display_name == "Gold"}.is_any?
+  raise "Service Level: Gold not in tags (#{tags})" unless tags.map{|tag| tag.category.display_name == "Service Level" && tag.display_name == "Gold"}.is_any?
 end
 def test_provisioning_schedule(provisioner, provider, prov_data, vm_name)
   #  Tests provision scheduling.
@@ -388,7 +388,7 @@ def test_vmware_default_placement(provisioner, prov_data, provider, setup_provid
   prov_data["catalog"]["vm_name"] = vm_name
   prov_data["environment"] = {"automatic_placement" => true}
   vm = provisioner.(prov_source(provider), prov_data)
-  wait_for(lambda{|| vm.exists_on_provider}, num_sec: 240, delay: 5, message: )
+  wait_for(lambda{|| vm.exists_on_provider}, num_sec: 240, delay: 5, message: "VM #{vm_name} exists on provider.")
   raise "The new vm is not placed in the Datacenter root directory!" unless "Datacenter" == provider.mgmt.get_vm(vm_name).raw.parent.parent.name
 end
 def test_linked_clone_default(provisioner, provisioning, provider, prov_data, vm_name)

@@ -14,7 +14,7 @@ pytestmark = [pytest.mark.tier(3), pytest.mark.provider([AzureProvider, GCEProvi
 def validate_proxy_logs(provider, utility_vm_ssh, appliance_ip)
   _is_ip_in_log = lambda do
     provider.refresh_provider_relationships()
-    return utility_vm_ssh.run_command().success
+    return (utility_vm_ssh.run_command("grep #{appliance_ip} /var/log/squid/access.log")).success
   end
   wait_for(func: _is_ip_in_log, num_sec: 300, delay: 10, message: "Waiting for requests from appliance in logs")
 end

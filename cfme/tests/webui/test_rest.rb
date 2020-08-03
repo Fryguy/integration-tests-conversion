@@ -16,7 +16,7 @@ def search_filter_obj(appliance, request)
   filter_value = fauxfactory.gen_string("alphanumeric", 10)
   param_filter = "Infrastructure Provider : Name"
   view = navigate_to(appliance.collections.infra_providers, "All")
-  view.search.save_filter(, filter_name, global_search: request.param)
+  view.search.save_filter("fill_field(#{param_filter}, =, #{filter_value})", filter_name, global_search: request.param)
   view.search.close_advanced_search()
   view.flash.assert_no_error()
   search_filter = appliance.rest_api.collections.search_filters.get(description: filter_name)

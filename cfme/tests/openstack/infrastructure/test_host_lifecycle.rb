@@ -43,15 +43,15 @@ def test_scale_provider_down(provider, host, has_mistral_service)
   wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
   host.browser.refresh()
   view = navigate_to(host, "Details")
-  wait_for(lambda{|| view.entities.summary("Properties").get_text_of("Maintenance Mode") == "Enabled"}, delay: 15, timeout: 300, message: , fail_func: host.browser.refresh)
+  wait_for(lambda{|| view.entities.summary("Properties").get_text_of("Maintenance Mode") == "Enabled"}, delay: 15, timeout: 300, message: "Maintenance Mode of host #{host.name} becomes Enabled", fail_func: host.browser.refresh)
   raise unless view.entities.summary("Properties").get_text_of("Maintenance Mode") == "Enabled"
   provider.scale_down()
   wait_for(lambda{|| provider.mgmt.iapi.node.get(host_uuid).provision_state == "available"}, delay: 5, timeout: 1200)
   host.name = host_uuid
   host.browser.refresh()
-  wait_for(lambda{|| host.exists}, delay: 15, timeout: 600, message: , fail_func: provider.browser.refresh)
+  wait_for(lambda{|| host.exists}, delay: 15, timeout: 600, message: "Hostname changed to #{host.name} after scale down", fail_func: provider.browser.refresh)
   view = navigate_to(host, "Details")
-  wait_for(lambda{|| view.entities.summary("Openstack Hardware").get_text_of("Provisioning State") == "available"}, delay: 15, timeout: 600, message: , fail_func: host.browser.refresh)
+  wait_for(lambda{|| view.entities.summary("Openstack Hardware").get_text_of("Provisioning State") == "available"}, delay: 15, timeout: 600, message: "Provisioning State of host #{host.name} is available", fail_func: host.browser.refresh)
   prov_state = view.entities.summary("Openstack Hardware").get_text_of("Provisioning State")
   raise unless prov_state == "available"
 end
@@ -96,7 +96,7 @@ def test_register_host(provider, host, has_mistral_service)
   end
   provider.browser.refresh()
   wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
-  wait_for(lambda{|| host.exists}, delay: 15, timeout: 600, message: , fail_func: host.browser.refresh)
+  wait_for(lambda{|| host.exists}, delay: 15, timeout: 600, message: "Host #{host.name} become visible", fail_func: host.browser.refresh)
   raise unless host.exists
 end
 def test_introspect_host(host, provider, has_mistral_service)
@@ -114,7 +114,7 @@ def test_introspect_host(host, provider, has_mistral_service)
   wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
   host.browser.refresh()
   view = navigate_to(host, "Details")
-  wait_for(lambda{|| view.entities.summary("Openstack Hardware").get_text_of("Introspected") == "true"}, delay: 15, timeout: 600, fail_func: host.browser.refresh, message: )
+  wait_for(lambda{|| view.entities.summary("Openstack Hardware").get_text_of("Introspected") == "true"}, delay: 15, timeout: 600, fail_func: host.browser.refresh, message: "Introspected state of host #{host.name} is true")
   raise unless view.entities.summary("Openstack Hardware").get_text_of("Introspected") == "true"
 end
 def test_provide_host(host, provider, has_mistral_service)

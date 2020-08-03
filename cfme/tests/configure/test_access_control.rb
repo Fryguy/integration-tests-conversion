@@ -57,7 +57,7 @@ end
 def two_child_tenants(appliance)
   child_tenant1 = appliance.collections.tenants.create(name: "marketing", description: "marketing", parent: appliance.collections.tenants.get_root_tenant())
   child_tenant2 = appliance.collections.tenants.create(name: "finance", description: "finance", parent: appliance.collections.tenants.get_root_tenant())
-  yield [child_tenant1, child_tenant2]
+  yield([child_tenant1, child_tenant2])
   child_tenant1.delete_if_exists()
   child_tenant2.delete_if_exists()
 end
@@ -67,7 +67,7 @@ def setup_openldap_user_group(appliance, two_child_tenants, openldap_auth_provid
   retrieved_groups = []
   for group in ldap_user.groups
     if !group.downcase().include?("evmgroup")
-      logger.info()
+      logger.info("Retrieving a user group that is non evm built-in: #{group}")
       tenant = (group == "marketing") ? "My Company/marketing" : "My Company/finance"
       retrieved_groups.push(retrieve_group(appliance, "ldap", ldap_user.username, group, auth_provider, tenant: tenant))
     else
@@ -75,7 +75,7 @@ def setup_openldap_user_group(appliance, two_child_tenants, openldap_auth_provid
     end
   end
   user = appliance.collections.users.simple_user(ldap_user.username, credentials[ldap_user.password].password, groups: ldap_user.groups, fullname: ldap_user.fullname || ldap_user.username)
-  yield [user, retrieved_groups]
+  yield([user, retrieved_groups])
   user.delete_if_exists()
   for group in retrieved_groups
     group.delete_if_exists()
@@ -109,7 +109,7 @@ def catalog_obj(appliance)
   catalog_name = fauxfactory.gen_alphanumeric(start: "cat_")
   catalog_desc = "My Catalog"
   cat = appliance.collections.catalogs.create(name: catalog_name, description: catalog_desc)
-  yield cat
+  yield(cat)
   if is_bool(cat.exists)
     cat.delete()
   end
@@ -127,7 +127,7 @@ def test_user_crud(appliance)
   group = group_collection.instantiate(description: group_name)
   user = new_user(appliance, [group])
   update(user) {
-    user.name = 
+    user.name = "#{user.name}edited"
   }
   copied_user = user.copy()
   copied_user.delete()
@@ -431,7 +431,7 @@ def test_group_crud(appliance)
   group_collection = appliance.collections.groups
   group = group_collection.create(description: fauxfactory.gen_alphanumeric(start: "grp_"), role: role)
   update(group) {
-    group.description = 
+    group.description = "#{group.description}edited"
   }
   group.delete()
 end
@@ -634,7 +634,7 @@ def test_role_crud(appliance)
   product_feature = (appliance.version > "5.11") ? ["Everything", "Configuration"] : ["Everything", "Settings", "Configuration"]
   role = _mk_role(appliance, name: nil, vm_restriction: nil, product_features: [[["Everything"], false], [product_feature, true], [["Everything", "Services", "Catalogs Explorer"], true]])
   update(role) {
-    role.name = 
+    role.name = "#{role.name}edited"
   }
   copied_role = role.copy()
   copied_role.delete()
@@ -752,7 +752,7 @@ end
 def _test_vm_removal(appliance, provider)
   logger.info("Testing for VM removal permission")
   vm = appliance.collections.infra_vms.all()[0]
-  logger.debug()
+  logger.debug("VM #{vm.name} selected")
   vm.delete(cancel: true)
 end
 def test_permission_edit(appliance, request, product_features)
@@ -849,7 +849,7 @@ def test_permissions(appliance, product_features, allowed_actions, disallowed_ac
         begin
           action_thunk(appliance)
         rescue Exception
-          fails[name] = 
+          fails[name] = "#{name}: #{traceback.format_exc()}"
         end
       end
       for (name, action_thunk) in sorted(disallowed_actions.to_a())
@@ -858,13 +858,15 @@ def test_permissions(appliance, product_features, allowed_actions, disallowed_ac
             action_thunk(appliance)
           }
         rescue pytest.fail.Exception
-          fails[name] = 
+          fails[name] = "#{name}: #{traceback.format_exc()}"
         end
       end
       if is_bool(fails)
         message = ""
         for failure in fails.values()
-          message = 
+          message = "#{message}
+
+#{failure}"
         end
         raise Exception, message
       end
@@ -977,7 +979,7 @@ def test_delete_default_tenant(appliance)
   #   
   view = navigate_to(appliance.collections.tenants, "All")
   roottenant = appliance.collections.tenants.get_root_tenant()
-  msg = 
+  msg = "Default Tenant \"#{roottenant.name}\" can not be deleted"
   tenant = appliance.collections.tenants.instantiate(name: roottenant.name)
   appliance.collections.tenants.delete(tenant)
   raise unless view.flash.assert_message(msg)
@@ -1009,10 +1011,10 @@ def test_superadmin_tenant_crud(request, appliance)
     end
   end
   update(tenant) {
-    tenant.description = 
+    tenant.description = "#{tenant.description}edited"
   }
   update(tenant) {
-    tenant.name = 
+    tenant.name = "#{tenant.name}edited"
   }
   tenant.delete()
 end
@@ -1048,10 +1050,10 @@ def test_superadmin_tenant_project_crud(request, appliance)
     end
   end
   update(project) {
-    project.description = 
+    project.description = "#{project.description}edited"
   }
   update(project) {
-    project.name = 
+    project.name = "#{project.name}_edited"
   }
   project.delete()
   tenant.delete()
@@ -1085,16 +1087,16 @@ def test_superadmin_child_tenant_crud(request, appliance, number_of_childrens)
   end
   tenant = tenant_collection.get_root_tenant()
   for i in 1.upto((number_of_childrens + 1)-1)
-    new_tenant = tenant_collection.create(name: fauxfactory.gen_alpha(15, start: ), description: fauxfactory.gen_alphanumeric(16), parent: tenant)
+    new_tenant = tenant_collection.create(name: fauxfactory.gen_alpha(15, start: "tenant_#{i}_"), description: fauxfactory.gen_alphanumeric(16), parent: tenant)
     tenant_list.push(new_tenant)
     tenant = new_tenant
   end
   tenant_update = tenant.parent_tenant
   update(tenant_update) {
-    tenant_update.description = 
+    tenant_update.description = "#{tenant_update.description}edited"
   }
   update(tenant_update) {
-    tenant_update.name = 
+    tenant_update.name = "#{tenant_update.name}edited"
   }
 end
 def test_unique_name_on_parent_level(request, appliance, collection_name)
@@ -1151,7 +1153,7 @@ def test_superadmin_tenant_admin_crud(appliance)
   user = new_user(appliance, [group])
   raise unless user.exists
   update(user) {
-    user.name = 
+    user.name = "#{user.name}_edited"
   }
   user.delete()
   raise unless !user.exists
@@ -1175,11 +1177,11 @@ def test_tenantadmin_group_crud(child_tenant_admin_user, tenant_role, child_tena
     navigate_to(appliance.server, "LoggedIn")
     raise unless appliance.server.current_full_name() == child_tenant_admin_user.name
     group_collection = appliance.collections.groups
-    group = group_collection.create(description: fauxfactory.gen_alphanumeric(15, "tenantgrp_"), role: tenant_role.name, tenant: )
+    group = group_collection.create(description: fauxfactory.gen_alphanumeric(15, "tenantgrp_"), role: tenant_role.name, tenant: "My Company/#{child_tenant.name}")
     request.addfinalizer(group.delete_if_exists)
     raise unless group.exists
     update(group) {
-      group.description = 
+      group.description = "#{group.description}edited"
     }
     group.delete()
     raise unless !group.exists
@@ -1241,7 +1243,7 @@ def test_tenantadmin_user_crud(child_tenant_admin_user, tenant_role, child_tenan
     request.addfinalizer(user.delete_if_exists)
     raise unless user.exists
     update(user) {
-      user.name = 
+      user.name = "#{user.name}_edited"
     }
     user.delete()
     raise unless !user.exists
@@ -1486,7 +1488,7 @@ def test_superadmin_child_tenant_delete_parent_catalog(appliance, request)
   cat = appliance.collections.catalogs.create(name: catalog_name, description: "my catalog")
   new_tenant = tenant_collection.create(name: fauxfactory.gen_alpha(15, start: "tenant_"), description: fauxfactory.gen_alphanumeric(16), parent: root_tenant)
   group_collection = appliance.collections.groups
-  group = group_collection.create(description: fauxfactory.gen_alphanumeric(start: "grp_"), role: "EvmRole-super_administrator", tenant: )
+  group = group_collection.create(description: fauxfactory.gen_alphanumeric(start: "grp_"), role: "EvmRole-super_administrator", tenant: "#{root_tenant.name}/#{new_tenant.name}")
   user = new_user(appliance, [group])
   _delete_user_group_tenant = lambda do
     for item in [user, group, new_tenant]
@@ -1583,19 +1585,19 @@ def test_tenant_ldap_group_switch_between_tenants(appliance, setup_openldap_auth
     view = navigate_to(appliance.server, "LoggedIn")
     raise "Only a single group is displayed for the user" unless view.group_names.size > 1
     display_other_groups = view.group_names.select{|g| g != view.current_groupname}.map{|g| g}
-    soft_assert.(view.current_fullname == user.name, )
+    soft_assert.(view.current_fullname == user.name, "user full name #{user.name} did not match UI display name #{view.current_fullname}")
     for group in retrieved_groups
-      soft_assert.(view.group_names.include?(group.description), )
+      soft_assert.(view.group_names.include?(group.description), "user group #{group} not displayed in UI groups list #{view.group_names}")
     end
     for other_group in display_other_groups
-      soft_assert.(user.groups.include?(other_group), )
+      soft_assert.(user.groups.include?(other_group), "Group #{other_group} in UI not expected for user #{user.name}")
       view.change_group(other_group)
       raise "Not logged in after switching to group {} for {}".format(other_group, user.name) unless view.is_displayed
-      soft_assert.(other_group == view.current_groupname, )
+      soft_assert.(other_group == view.current_groupname, "After switching to group #{other_group}, its not displayed as active")
     end
   }
   appliance.server.login_admin()
-  raise  unless user.exists
+  raise "User record for \"#{user.name}\" should exist after login" unless user.exists
 end
 def test_tenant_visibility_miq_ae_namespaces_all_parents()
   # 

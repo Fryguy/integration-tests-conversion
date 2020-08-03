@@ -38,10 +38,10 @@ def test_cloud_catalog_item(appliance, vm_name, setup_provider, provider, dialog
   #       initialEstimate: 1/4h
   #   
   wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
-  vm = appliance.collections.cloud_instances.instantiate(, provider)
+  vm = appliance.collections.cloud_instances.instantiate("#{vm_name}0001", provider)
   request.addfinalizer(lambda{|| vm.cleanup_on_provider()})
   image = provisioning["image"]["name"]
-  item_name = 
+  item_name = "#{provider.name}-service-#{fauxfactory.gen_alphanumeric()}"
   inst_args = {"catalog" => {"catalog_name" => {"name" => image, "provider" => provider.name}, "vm_name" => vm_name}, "environment" => {"availability_zone" => provisioning.get("availability_zone", nil), "security_groups" => [provisioning.get("security_group", nil)], "cloud_tenant" => provisioning.get("cloud_tenant", nil), "cloud_network" => provisioning.get("cloud_network", nil), "cloud_subnet" => provisioning.get("cloud_subnet", nil), "resource_groups" => provisioning.get("resource_group", nil)}, "properties" => {"instance_type" => partial_match(provisioning.get("instance_type", nil)), "guest_keypair" => provisioning.get("guest_keypair", nil)}}
   if is_bool(provider.one_of(GCEProvider))
     recursive_update(inst_args, {"properties" => {"boot_disk_size" => provisioning["boot_disk_size"], "is_preemptible" => true}})
@@ -57,6 +57,6 @@ def test_cloud_catalog_item(appliance, vm_name, setup_provider, provider, dialog
   request_description = item_name
   provision_request = appliance.collections.requests.instantiate(request_description, partial_check: true)
   provision_request.wait_for_request()
-  msg = 
+  msg = "Request failed with the message #{provision_request.rest.message}"
   raise msg unless provision_request.is_succeeded()
 end

@@ -20,7 +20,7 @@ def test_rpms_present(appliance, package)
   #       testtype: functional
   #       casecomponent: Appliance
   #   
-  result = appliance.ssh_client.run_command()
+  result = appliance.ssh_client.run_command("rpm -q #{package}")
   raise unless !result.output.include?("is not installed")
   raise unless result.success
 end
@@ -82,9 +82,9 @@ def test_firewalld_services_are_active(appliance)
   #       upstream: no
   #   
   manageiq_zone = "manageiq"
-  result = appliance.ssh_client.run_command()
-  raise unless  <= Set.new(result.output.split())
-  default_iface_zone = appliance.ssh_client.run_command().output.strip()
+  result = appliance.ssh_client.run_command("firewall-cmd --permanent --zone=#{manageiq_zone} --list-services")
+  raise unless Set.new(["ssh", "http", "https"]) <= Set.new(result.output.split())
+  default_iface_zone = ((appliance.ssh_client.run_command("firewall-cmd --get-zone-of-interface #{appliance.default_iface}")).output).strip()
   raise unless default_iface_zone == manageiq_zone
 end
 def test_firewalld_active_zone_after_restart(appliance)
@@ -103,7 +103,7 @@ def test_firewalld_active_zone_after_restart(appliance)
   #   
   manageiq_zone = "manageiq"
   get_def_iface_zone = lambda do
-    default_iface_zone_cmd = appliance.ssh_client.run_command()
+    default_iface_zone_cmd = appliance.ssh_client.run_command("firewall-cmd --get-zone-of-interface #{appliance.default_iface}")
     raise unless default_iface_zone_cmd.success
     return default_iface_zone_cmd.output.strip()
   end
@@ -150,7 +150,7 @@ def test_certificates_present(appliance, soft_assert)
   known_certs = [rhsm_ca_cert, "/etc/pki/product-default/69.pem", "/etc/pki/product/167.pem", "/etc/pki/product/201.pem"]
   raise unless (appliance.ssh_client.run_command(("curl --connect-timeout 5 --max-time 10 --retry 10 --retry-delay 0 --retry-max-time 60 --cacert {ca_cert} {url}").format(ca_cert: rhsm_ca_cert, url: rhsm_url))).success
   for cert in known_certs
-    raise unless appliance.ssh_client.run_command().success
+    raise unless (appliance.ssh_client.run_command("test -f '#{cert}'")).success
     raise unless appliance.ssh_client.run_command(("openssl verify -CAfile {ca_cert} '{cert_file}'").format(ca_cert: rhsm_ca_cert, cert_file: cert))
   end
 end
@@ -173,7 +173,7 @@ def test_html5_ssl_files_present(appliance, soft_assert)
   key_file = File.join(cert.install_dir,"server.cer.key")
   ssl_files = [cert_file, key_file]
   for ssl_file in ssl_files
-    raise unless appliance.ssh_client.run_command().success
+    raise unless (appliance.ssh_client.run_command("test -f '#{ssl_file}'")).success
   end
 end
 def test_db_connection(appliance)
@@ -212,7 +212,7 @@ def test_keys_included(appliance, soft_assert)
   #   
   keys = ["v0_key", "v1_key", "v2_key"]
   for k in keys
-    soft_assert.(appliance.ssh_client.run_command().success, )
+    soft_assert.((appliance.ssh_client.run_command("test -e /var/www/miq/vmdb/certs/#{k}")).success, "#{k} was not included in the build")
   end
 end
 def test_appliance_console_packages(appliance)
@@ -347,7 +347,7 @@ def test_codename_in_stdout(appliance)
   cursor = ((appliance.ssh_client.run_command("journalctl -u evmserverd --show-cursor | tail -n1")).output).split_p("-- cursor: ")[1]
   appliance.ssh_client.run_command("appliance_console_cli --server=restart")
   codename_in_stdout = lambda do
-    r = appliance.ssh_client.run_command()
+    r = appliance.ssh_client.run_command("journalctl -u evmserverd -c \"#{cursor}\" | egrep -i \"codename: \\w+$\"")
     return r.success
   end
   codename_in_stdout = wait_for_decorator(method(:codename_in_stdout))
@@ -399,6 +399,6 @@ def test_appliance_top_output_log(appliance)
   #   
   some_expected_processes = ["MIQ Server", "MIQ: MiqGenericWorker", "MIQ: MiqPriorityWorker", "MIQ: MiqScheduleWorker"]
   for process_name in some_expected_processes
-    raise unless appliance.ssh_client.run_command()
+    raise unless appliance.ssh_client.run_command("grep -q \"#{process_name}\" /var/www/miq/vmdb/log/top_output.log")
   end
 end

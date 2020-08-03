@@ -48,7 +48,7 @@ def testing_instance2(appliance, provider, small_template, setup_provider)
   #  Fixture to provision instance on the provider
   #   
   instance2 = create_instance(appliance, provider, small_template.name)
-  yield instance2
+  yield(instance2)
   instance2.cleanup_on_provider()
 end
 def vm_name(testing_instance)
@@ -92,7 +92,7 @@ def wait_for_termination(provider, instance)
   refresh_timer = RefreshTimer(time_for_refresh: 300)
   wait_for(provider.is_refreshed, [refresh_timer], message: "Waiting for provider.is_refreshed", num_sec: 1000, delay: 60, handle_exception: true)
   wait_for_ui_state_refresh(instance, provider, state_change_time, timeout: 720)
-  term_states = 
+  term_states = Set.new([instance.STATE_TERMINATED, instance.STATE_ARCHIVED, instance.STATE_UNKNOWN])
   if !term_states.include?(pwr_mgmt.get_text_of("Power State"))
     # Wait for one more state change as transitional state also changes \"State Changed On\" time
     #     
@@ -106,10 +106,10 @@ def check_power_options(soft_assert, instance, power_state)
   #  Checks if power options match given power state ('on', 'off')
   #   
   for pwr_option in instance.ui_powerstates_available[power_state]
-    soft_assert.(instance.is_pwr_option_available_in_cfme(option: pwr_option, from_details: true), )
+    soft_assert.(instance.is_pwr_option_available_in_cfme(option: pwr_option, from_details: true), "#{pwr_option} must be available in current power state - #{power_state} ")
   end
   for pwr_option in instance.ui_powerstates_unavailable[power_state]
-    soft_assert.(!instance.is_pwr_option_available_in_cfme(option: pwr_option, from_details: true), )
+    soft_assert.(!instance.is_pwr_option_available_in_cfme(option: pwr_option, from_details: true), "#{pwr_option} must not be available in current power state - #{power_state} ")
   end
 end
 def wait_for_instance_state(soft_assert, instance, state)
@@ -153,7 +153,7 @@ def wait_for_instance_state(soft_assert, instance, state)
   if is_bool(desired_mgmt_state)
     instance.mgmt.wait_for_state(desired_mgmt_state, timeout: 720)
   end
-  soft_assert.(instance.wait_for_instance_state_change(desired_state: desired_ui_state, timeout: 1200), )
+  soft_assert.(instance.wait_for_instance_state_change(desired_state: desired_ui_state, timeout: 1200), "Instance #{instance} isn't #{desired_ui_state} in CFME UI")
 end
 def test_quadicon_terminate_cancel(provider, testing_instance, ensure_vm_running, soft_assert)
   #  Tests terminate cancel
@@ -641,7 +641,7 @@ def test_power_options_on_archived_instance_all_page(testing_instance)
         end
       end
     end
-    view.flash.assert_message()
+    view.flash.assert_message("#{action} action does not apply to selected items")
     view.flash.dismiss()
   end
 end

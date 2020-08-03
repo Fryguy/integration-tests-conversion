@@ -90,7 +90,7 @@ def wait_for_retired(entity, num_sec: 1000)
 end
 def service_body(**kwargs)
   uid = fauxfactory.gen_alphanumeric(5)
-  body = {"name" => , "description" => }
+  body = {"name" => "test_rest_service_#{uid}", "description" => "Test REST Service #{uid}"}
   body.update(kwargs)
   return body
 end
@@ -109,11 +109,11 @@ end
 def catalog_bundle(request, dialog, service_catalog_obj, appliance, provider)
   catalog_items = service_templates_ui(request, appliance, service_dialog: dialog, service_catalog: service_catalog_obj, provider: provider, num: NUM_BUNDLE_ITEMS)
   uid = fauxfactory.gen_alphanumeric()
-  bundle_name = 
-  bundle = appliance.collections.catalog_bundles.create(bundle_name, description: , display_in: true, catalog: service_catalog_obj, dialog: dialog, catalog_items: catalog_items.map{|item| item.name})
+  bundle_name = "test_rest_bundle_#{uid}"
+  bundle = appliance.collections.catalog_bundles.create(bundle_name, description: "Test REST Bundle #{uid}", display_in: true, catalog: service_catalog_obj, dialog: dialog, catalog_items: catalog_items.map{|item| item.name})
   catalog_rest = appliance.rest_api.collections.service_catalogs.get(name: service_catalog_obj.name)
   bundle_rest = catalog_rest.service_templates.get(name: bundle_name)
-  yield bundle_rest
+  yield(bundle_rest)
   if is_bool(bundle.exists)
     bundle.delete()
   end
@@ -165,7 +165,7 @@ def cart(appliance, delete_carts)
   cart = appliance.rest_api.collections.service_orders.action.create(name: "cart")
   assert_response(appliance)
   cart = cart[0]
-  yield cart
+  yield(cart)
   if is_bool(cart.exists)
     cart.action.delete()
   end
@@ -604,7 +604,7 @@ class TestServiceRESTAPI
     parent = collection.action.create(service_body(parent_service: {"id" => grandparent.id}))[0]
     child = collection.action.create(service_body(parent_service: {"id" => parent.id}))[0]
     raise unless parent.ancestry == grandparent.id.to_s
-    raise unless child.ancestry == 
+    raise unless child.ancestry == "#{grandparent.id}/#{parent.id}"
     grandparent.action.delete()
     assert_response(appliance)
     wait_for(lambda{|| !appliance.rest_api.collections.services.find_by(name: grandparent.name)}, num_sec: 600, delay: 10)
@@ -1091,7 +1091,7 @@ class TestServiceCatalogsRESTAPI
     end
     wait_for(_order_finished, num_sec: 180, delay: 10)
     service_name = get_dialog_service_name(appliance, service_request, template.name)
-    raise unless service_request.message.include?()
+    raise unless service_request.message.include?("[#{service_name}]")
     source_id = service_request.source_id.to_s
     new_service = appliance.rest_api.collections.services.get(service_template_id: source_id)
     raise unless new_service.name == service_name
@@ -1131,7 +1131,7 @@ class TestServiceCatalogsRESTAPI
       service_request = appliance.rest_api.get_entity("service_requests", result["id"])
       wait_for(_order_finished, func_args: [service_request], num_sec: 180, delay: 10)
       service_name = get_dialog_service_name(appliance, service_request, *catalog.service_templates.all.map{|t| t.name})
-      raise unless service_request.message.include?()
+      raise unless service_request.message.include?("[#{service_name}]")
       source_id = service_request.source_id.to_s
       new_service = appliance.rest_api.collections.services.get(service_template_id: source_id)
       raise unless new_service.name == service_name
@@ -1163,7 +1163,7 @@ class TestServiceCatalogsRESTAPI
     end
     wait_for(_order_finished, num_sec: 2000, delay: 10)
     service_name = get_dialog_service_name(appliance, service_request, catalog_bundle.name)
-    raise unless service_request.message.include?()
+    raise unless service_request.message.include?("[#{service_name}]")
     source_id = service_request.source_id.to_s
     new_service = appliance.rest_api.collections.services.get(service_template_id: source_id)
     raise unless new_service.name == service_name
@@ -1332,7 +1332,7 @@ class TestPendingRequestsRESTAPI
     wait_for(_order_approved, num_sec: 180, delay: 10)
     source_id = pending_request.source_id.to_s
     new_service = appliance.rest_api.collections.services.get(service_template_id: source_id)
-    raise unless pending_request.message.include?()
+    raise unless pending_request.message.include?("[#{new_service.name}]")
     request.addfinalizer(new_service.action.delete)
   end
   def test_order_manual_denial(appliance, pending_request)
@@ -1360,7 +1360,7 @@ class TestServiceRequests
   def new_role(appliance)
     role = copy_role(appliance, "EvmRole-user_self_service")
     role.action.edit(settings: nil)
-    yield role
+    yield(role)
     role.action.delete()
   end
   def new_group(request, appliance, new_role)
@@ -1395,7 +1395,7 @@ class TestServiceRequests
     template_id = new_template.id
     catalog = user_api.get_entity("service_catalogs", catalog_id)
     templates_collection = catalog.service_templates
-    template_href = 
+    template_href = "#{catalog.href}/service_templates/#{template_id}"
     templates_collection.action.order(href: template_href)
     raise unless user_api.response
     result = user_api.response.json()
@@ -1407,7 +1407,7 @@ class TestServiceRequests
     end
     wait_for(_order_finished, num_sec: 180, delay: 10)
     service_name = get_dialog_service_name(appliance, service_request, new_template.name)
-    raise unless service_request.message.include?()
+    raise unless service_request.message.include?("[#{service_name}]")
     source_id = service_request.source_id.to_s
     new_service = appliance.rest_api.collections.services.get(service_template_id: source_id)
     raise unless new_service.name == service_name
@@ -1547,7 +1547,8 @@ class TestOrchestrationTemplatesRESTAPI
     new = []
     for _ in num_orch_templates.times
       uniq = fauxfactory.gen_alphanumeric(5)
-      new.push({"name" => , "content" => })
+      new.push({"name" => "test_copied_#{uniq}", "content" => "{ 'Description' : '#{uniq}' }
+"})
     end
     if is_bool(from_detail)
       copied = []
@@ -1621,7 +1622,7 @@ class TestOrchestrationTemplatesRESTAPI
     #         initialEstimate: 1/4h
     #     
     uniq = fauxfactory.gen_alphanumeric(5)
-    payload = {"name" => , "description" => , "type" => "InvalidOrchestrationTemplateType", "orderable" => false, "draft" => false, "content" => TEMPLATE_TORSO.gsub("CloudFormation", uniq)}
+    payload = {"name" => "test_#{uniq}", "description" => "Test Template #{uniq}", "type" => "InvalidOrchestrationTemplateType", "orderable" => false, "draft" => false, "content" => TEMPLATE_TORSO.gsub("CloudFormation", uniq)}
     pytest.raises(Exception, match: "Api::BadRequestError") {
       appliance.rest_api.collections.orchestration_templates.action.create(payload)
     }
@@ -1667,7 +1668,7 @@ class TestServiceOrderCart
     #         tags: service
     #     
     raise unless cart.state == "cart"
-    cart_dict = appliance.rest_api.get()
+    cart_dict = appliance.rest_api.get("#{cart.collection._href}/cart")
     raise unless cart_dict["id"] == cart.id
   end
   def test_create_second_cart(request, appliance, cart)
@@ -1712,7 +1713,7 @@ class TestServiceOrderCart
       cart.action.delete()
     end
     assert_response(appliance)
-    cart_dict = appliance.rest_api.get()
+    cart_dict = appliance.rest_api.get("#{href}/cart")
     raise unless response["id"] == cart_dict["id"]
   end
   def test_add_to_cart(request, cart, service_templates_class)
@@ -1748,14 +1749,14 @@ class TestServiceOrderCart
     #         tags: service
     #     
     add_requests(cart, service_templates_class)
-    cart_req_ids = 
+    cart_req_ids = cart.service_requests.map{|req| req.id}.to_set
     body = cart.service_requests.map{|req| {"id" => req.id}}
     response = cart.collection._api.collections.service_requests.action.delete(*body)
     assert_response(appliance)
     raise unless response.size == service_templates_class.size
     cart.service_requests.reload()
     raise unless cart.service_requests.subcount == 0
-    all_req_ids = 
+    all_req_ids = appliance.rest_api.collections.service_requests.map{|req| req.id}.to_set
     raise unless all_req_ids - cart_req_ids == all_req_ids
   end
   def test_remove_from_cart(appliance, cart, service_templates_class)
@@ -1771,14 +1772,14 @@ class TestServiceOrderCart
     #         tags: service
     #     
     add_requests(cart, service_templates_class)
-    cart_req_ids = 
+    cart_req_ids = cart.service_requests.map{|req| req.id}.to_set
     body = cart.service_requests.map{|req| {"id" => req.id}}
     response = cart.service_requests.action.remove(*body)
     assert_response(appliance)
     raise unless response.size == service_templates_class.size
     cart.service_requests.reload()
     raise unless cart.service_requests.subcount == 0
-    all_req_ids = 
+    all_req_ids = appliance.rest_api.collections.service_requests.map{|req| req.id}.to_set
     raise unless all_req_ids - cart_req_ids == all_req_ids
   end
   def test_clear_cart(appliance, cart, service_templates_class)
@@ -1794,12 +1795,12 @@ class TestServiceOrderCart
     #         tags: service
     #     
     add_requests(cart, service_templates_class)
-    cart_req_ids = 
+    cart_req_ids = cart.service_requests.map{|req| req.id}.to_set
     cart.action.clear()
     assert_response(appliance)
     cart.service_requests.reload()
     raise unless cart.service_requests.subcount == 0
-    all_req_ids = 
+    all_req_ids = appliance.rest_api.collections.service_requests.map{|req| req.id}.to_set
     raise unless all_req_ids - cart_req_ids == all_req_ids
   end
   def test_copy_cart(appliance, cart)
@@ -1850,14 +1851,14 @@ class TestServiceOrderCart
     wait_for(_order_finished, num_sec: 180, delay: 10)
     for (index, sr) in enumerate(service_requests)
       service_name = get_dialog_service_name(appliance, sr, *selected_templates.map{|t| t.name})
-      raise unless sr.message.include?()
+      raise unless sr.message.include?("[#{service_name}]")
       service_description = selected_templates[index].description
       new_service = appliance.rest_api.collections.services.get(description: service_description)
       request.addfinalizer(new_service.action.delete)
       raise unless service_name == new_service.name
     end
     pytest.raises(Exception, match: "ActiveRecord::RecordNotFound") {
-      appliance.rest_api.get()
+      appliance.rest_api.get("#{cart.collection._href}/cart")
     }
   end
   def test_delete_cart_from_detail(cart, method)
@@ -1932,7 +1933,7 @@ def automate_env_setup(klass)
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(start: "meth_"), display_name: fauxfactory.gen_alphanumeric(start: "meth_"), location: "inline", script: script)
   klass.schema.add_fields({"name" => "meth", "type" => "Method", "data_type" => "Integer"})
   instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(start: "inst_"), display_name: fauxfactory.gen_alphanumeric(start: "inst_"), description: fauxfactory.gen_alphanumeric(), fields: {"meth" => {"value" => method.name}})
-  yield instance
+  yield(instance)
   method.delete()
   instance.delete()
 end
@@ -1942,7 +1943,7 @@ def get_service_template(appliance, request, automate_env_setup)
   service_dialog = appliance.rest_api.collections.service_dialogs.action.create(None: data)[0]
   service_catalog = _service_catalogs(request, appliance, num: 1)[0]
   service_template = _service_templates(request, appliance, service_dialog: service_dialog, service_catalog: service_catalog)[0]
-  yield service_template
+  yield(service_template)
   service_template.action.delete()
   service_catalog.action.delete()
   service_dialog.action.delete()
@@ -1998,7 +1999,7 @@ def request_task(appliance, service_templates)
   assert_response(appliance)
   wait_for(lambda{|| service_request.request_state == "finished"}, fail_func: service_request.reload, num_sec: 200, delay: 5)
   service_template_name = service_templates[0].name
-  return service_request.request_tasks.filter(Q("description", "=", )).resources[0]
+  return (service_request.request_tasks.filter(Q("description", "=", "Provisioning [#{service_template_name}] for Service [#{service_template_name}]*"))).resources[0]
 end
 def test_edit_service_request_task(appliance, request_task)
   # 
@@ -2123,10 +2124,10 @@ def test_crud_service_template_with_picture(appliance, request, service_catalog_
   service_template = appliance.rest_api.collections.service_templates.action.create(None: data)[0]
   assert_response(appliance)
   request.addfinalizer(service_template.action.delete)
-  picture_1_md5 = appliance.rest_api.get()["picture"]["md5"]
+  picture_1_md5 = appliance.rest_api.get("#{service_template._href}?attributes=picture")["picture"]["md5"]
   updated_data = {"picture" => {"content" => "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "extension" => "jpg"}}
   service_template.action.edit(None: updated_data)
   assert_response(appliance)
-  picture_2_md5 = appliance.rest_api.get()["picture"]["md5"]
+  picture_2_md5 = appliance.rest_api.get("#{service_template._href}?attributes=picture")["picture"]["md5"]
   raise unless picture_1_md5 != picture_2_md5
 end

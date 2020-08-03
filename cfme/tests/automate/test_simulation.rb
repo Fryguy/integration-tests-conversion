@@ -87,7 +87,7 @@ def test_automate_simulation_result_has_hash_data(custom_instance)
     simulate(appliance: instance.appliance, attributes_values: {"namespace" => instance.klass.namespace.name, "class" => instance.klass.name, "instance" => instance.name}, message: "create", request: "Call_Instance", execute_methods: true)
   }
   view = instance.create_view(AutomateSimulationView)
-  raise unless view.result_tree.click_path(, , , "values", "Hash", "Key").text == "Key"
+  raise unless (view.result_tree.click_path("ManageIQ/SYSTEM / PROCESS / #{instance.klass.name}", "ManageIQ/System / #{instance.klass.name} / Call_Instance", "#{instance.domain.name}/System / #{instance.klass.name} / #{instance.name}", "values", "Hash", "Key")).text == "Key"
 end
 def test_simulation_copy_button(appliance)
   # 
@@ -145,7 +145,7 @@ def test_attribute_value_message(custom_instance)
   #   
   instance = custom_instance.(ruby_code: nil)
   msg = fauxfactory.gen_alphanumeric()
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*#{instance.name}##{msg}.*"])).waiting(timeout: 120) {
     simulate(appliance: instance.appliance, attributes_values: {"namespace" => instance.klass.namespace.name, "class" => instance.klass.name, "instance" => instance.name, "message" => msg}, message: "create", request: "call_instance_with_message", execute_methods: true)
   }
 end
@@ -175,7 +175,7 @@ def test_action_invoke_custom_automation(request, appliance)
   #           5. Save button should enabled
   #           6. Action should be saved successfully
   #   
-  attr_val = 2.times.map{|_| 1.upto(6-1).map{|num|[, fauxfactory.gen_alpha()]}.to_h}
+  attr_val = 2.times.map{|_| 1.upto(6-1).map{|num|["attribute_#{num}", fauxfactory.gen_alpha()]}.to_h}
   automation_action = appliance.collections.actions.create(fauxfactory.gen_alphanumeric(), "Invoke a Custom Automation", {})
   request.addfinalizer(automation_action.delete_if_exists)
   view = navigate_to(automation_action, "Edit")
@@ -184,5 +184,5 @@ def test_action_invoke_custom_automation(request, appliance)
   view.attribute_value_pair.clear()
   view.save_button.click()
   view = automation_action.create_view(ActionDetailsView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Action \"#{automation_action.description}\" was saved")
 end

@@ -25,10 +25,10 @@ def test_sdn_api_inventory_networks(provider, appliance)
   cfme_networks = sorted(appliance.collections.cloud_networks.all().map{|nt| nt.name})
   if is_bool(provider.one_of(EC2Provider))
     raise "There is NOT the same amount of networks" unless cfme_networks.size == prov_networks.size
-    
+    "in CFME than on EC2: #{prov_networks} #{cfme_networks}"
   else
     raise "Prov networks list: {networks} different from " unless cfme_networks == prov_networks
-    
+    "cfme list: #{cfme_networks}"
   end
 end
 def test_sdn_api_inventory_routers(provider, appliance)
@@ -49,7 +49,7 @@ def test_sdn_api_inventory_routers(provider, appliance)
   prov_routers = sorted(provider.mgmt.list_router())
   cfme_routers = sorted(appliance.collections.network_routers.all().map{|rt| rt.name})
   raise "Prov routers list: {router} different from cfme list: " unless cfme_routers == prov_routers
-  
+  "#{cfme_routers}"
 end
 def test_sdn_api_inventory_subnets(provider, appliance)
   # Pulls the list of subnets from the Provider API and from the appliance. Compare the 2
@@ -73,7 +73,7 @@ def test_sdn_api_inventory_subnets(provider, appliance)
     prov_subnets = provider.mgmt.list_subnet()
   end
   raise "Prov subnets list: {sub} " unless sorted(cfme_subnets) == sorted(prov_subnets)
-  
+  "different from cfme list: #{cfme_subnets}"
 end
 def test_sdn_api_inventory_security_groups(provider, appliance)
   # Pulls the list of security groups from the Provider API and from the appliance. Compare
@@ -90,7 +90,7 @@ def test_sdn_api_inventory_security_groups(provider, appliance)
   prov_sec_gp = sorted(provider.mgmt.list_security_group())
   cfme_sec_gp = sorted(appliance.collections.network_security_groups.all().map{|sec| sec.name})
   raise "Prov security groups list: {sec} different from " unless prov_sec_gp == cfme_sec_gp
-  
+  "cfme list: #{cfme_sec_gp}"
 end
 def test_sdn_api_inventory_loadbalancers(provider, appliance)
   # Pulls the list of loadbalancers from the Provider API and from the appliance. Compare the 2
@@ -107,7 +107,7 @@ def test_sdn_api_inventory_loadbalancers(provider, appliance)
   prov_load_balancers = sorted(provider.mgmt.list_load_balancer())
   cfme_load_balancers = sorted(appliance.collections.balancers.all().map{|lb| lb.name})
   raise "Provider balancer list: {prov} different " unless prov_load_balancers == cfme_load_balancers
-  
+  "from cfme list: #{cfme_load_balancers}"
 end
 def secgroup_with_rule(provider)
   res_group = provider.data["provisioning"]["resource_group"]
@@ -115,7 +115,7 @@ def secgroup_with_rule(provider)
   provider.mgmt.create_netsec_group(secgroup_name, res_group)
   provider.mgmt.create_netsec_group_port_allow(secgroup_name, "Tcp", "*", "*", "Allow", "Inbound", description: "Allow port 22", source_port_range: "*", destination_port_range: "22", priority: 100, name: "Port_22_allow", resource_group: res_group)
   provider.refresh_provider_relationships()
-  yield secgroup_name
+  yield(secgroup_name)
   provider.mgmt.remove_netsec_group(secgroup_name, res_group)
 end
 def test_sdn_nsg_firewall_rules(provider, appliance, secgroup_with_rule)

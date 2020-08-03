@@ -180,7 +180,7 @@ def test_replication_connect_to_vm_in_region(provider, replicated_appliances)
     main_window = view.browser.current_window_handle
     view.entities.summary("Multi Region").click_at("Remote Region")
     wait_for(lambda{|| view.browser.window_handles.size > initial_count}, timeout: 30, message: "Check for new browser window")
-    open_url_window = (Set.new(view.browser.window_handles) - ).pop()
+    open_url_window = (Set.new(view.browser.window_handles) - Set.new([main_window])).pop()
     view.browser.switch_to_window(open_url_window)
     sleep(5)
     view = global_appliance.browser.create_view(LoginPage)
@@ -327,7 +327,7 @@ def test_appliance_replicate_remote_down(replicated_appliances)
   remote_appliance,global_appliance = replicated_appliances
   global_region = global_appliance.server.zone.region
   raise "Remote appliance not found on Replication tab after initial configuration." unless global_region.replication.get_replication_status(host: remote_appliance.hostname)
-  result = global_appliance.ssh_client.run_command()
+  result = global_appliance.ssh_client.run_command("firewall-cmd --direct --add-rule ipv4 filter OUTPUT 0 -d #{remote_appliance.hostname} -j DROP")
   raise "Could not create firewall rule on global appliance." unless result.success
   global_appliance.browser.widgetastic.refresh()
   raise "Remote appliance not found on Replication tab after dropped connection." unless global_region.replication.get_replication_status(host: remote_appliance.hostname)

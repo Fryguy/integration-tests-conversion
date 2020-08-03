@@ -21,7 +21,7 @@ include Cfme::Utils::Wait
 pytestmark = [pytest.mark.provider([EC2Provider], scope: "function"), pytest.mark.usefixtures("setup_provider", "refresh_provider"), test_requirements.tag]
 def map_tags(appliance, provider, request)
   tag = appliance.collections.map_tags.create(entity_type: partial_match(provider.name.title()), label: "test", category: "Testing")
-  yield tag
+  yield(tag)
   request.addfinalizer(lambda{|| tag.delete()})
 end
 def tagged_vm(provider)
@@ -39,14 +39,14 @@ def refresh_provider(provider)
 end
 def tag_mapping_items(request, appliance, provider)
   entity_type = request.param
-  collection = appliance.collections.getattr()
+  collection = appliance.collections.getattr("cloud_#{entity_type}")
   collection.filters = {"provider" => provider}
   view = navigate_to(collection, "AllForProvider")
   name = view.entities.get_first_entity().name
   begin
     mgmt_item = (entity_type == "images") ? provider.mgmt.get_template(name) : provider.mgmt.get_vm(name)
   rescue ImageNotFoundError
-    msg = 
+    msg = "Failed looking up template [#{name}] from CFME on provider: #{provider}"
     logger.exception(msg)
     pytest.skip(msg)
   end
@@ -113,7 +113,7 @@ def test_labels_update(provider, tag_mapping_items, soft_assert)
   provider.refresh_provider_relationships(method: "ui")
   view = navigate_to(entity, "Details", force: true)
   fields = view.entities.summary("Labels").fields
-  soft_assert.(!fields.include?(tag_label), )
+  soft_assert.(!fields.include?(tag_label), "#{tag_label} label was not removed from details page")
 end
 def test_mapping_tags(appliance, provider, tag_mapping_items, soft_assert, category, request)
   # Test mapping tags on provider instances and images
@@ -163,10 +163,10 @@ def test_mapping_tags(appliance, provider, tag_mapping_items, soft_assert, categ
   view.cancel_button.click()
   map_tag = appliance.collections.map_tags.create(entity_type: select_text, label: tag_label, category: category.name)
   provider.refresh_provider_relationships(method: "ui")
-  soft_assert.(entity.get_tags().map{|tag| tag.category.display_name == category.name && tag.display_name == tag_value}.is_any?, )
+  soft_assert.(entity.get_tags().map{|tag| tag.category.display_name == category.name && tag.display_name == tag_value}.is_any?, "#{category.name}: #{tag_value} was not found in tags")
   map_tag.delete()
   provider.refresh_provider_relationships(method: "ui")
-  soft_assert.(!entity.get_tags().include?())
+  soft_assert.(!entity.get_tags().include?("#{category.name}: #{tag_value}"))
 end
 def test_ec2_tags(provider, request, collection_type, testing_instance)
   # 
@@ -186,8 +186,8 @@ def test_ec2_tags(provider, request, collection_type, testing_instance)
   #           test:testing in Labels field
   #           5. Delete that instance/untag image
   #   
-  tag_key = 
-  tag_value = 
+  tag_key = "test_#{fauxfactory.gen_alpha()}"
+  tag_value = "testing_#{fauxfactory.gen_alpha()}"
   if collection_type == "templates"
     taggable = provider.mgmt.list_templates()[0]
     request.addfinalizer(lambda{|| taggable.unset_tag(tag_key, tag_value)})

@@ -45,13 +45,13 @@ TEXT_DISPLAY = {"group" => {"group_display" => false, "btn_display" => true}, "b
 def objects(appliance, add_generic_object_to_service)
   instance = add_generic_object_to_service
   obj_dest = {"GENERIC" => {"All" => [instance.my_service, "GenericObjectInstance"], "Details" => [instance, "MyServiceDetails"]}, "SERVICE" => {"All" => [instance.my_service, "All"], "Details" => [instance.my_service, "Details"]}}
-  yield obj_dest
+  yield(obj_dest)
 end
 def button_group(appliance, request)
   appliance.context.use(ViaUI) {
     collection = appliance.collections.button_groups
     button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: collection.getattr(request.param))
-    yield [button_gp, request.param]
+    yield([button_gp, request.param])
     button_gp.delete_if_exists()
   }
 end
@@ -60,7 +60,7 @@ def serv_button_group(appliance, request)
     collection = appliance.collections.button_groups
     button_gp = collection.create(text: fauxfactory.gen_numeric_string(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), display: TEXT_DISPLAY[request.param]["group_display"], type: collection.getattr("SERVICE"))
     button = button_gp.buttons.create(text: fauxfactory.gen_numeric_string(start: "btn_"), hover: fauxfactory.gen_alphanumeric(15, start: "btn_hvr_"), display: TEXT_DISPLAY[request.param]["btn_display"], display_for: "Single and list", system: "Request", request: "InspectMe")
-    yield [button, button_gp]
+    yield([button, button_gp])
     button.delete_if_exists()
     button_gp.delete_if_exists()
   }
@@ -69,7 +69,7 @@ def service_button_group(appliance)
   appliance.context.use(ViaUI) {
     collection = appliance.collections.button_groups
     button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "group_"), hover: fauxfactory.gen_alphanumeric(start: "hover_"), type: collection.getattr("SERVICE"))
-    yield button_gp
+    yield(button_gp)
     button_gp.delete_if_exists()
   }
 end
@@ -78,7 +78,7 @@ def vis_enb_button_service(request, appliance, service_button_group)
   exp = {request.param => {"tag" => "My Company Tags : Department", "value" => "Engineering"}}
   appliance.context.use(ViaUI) {
     button = service_button_group.buttons.create(text: fauxfactory.gen_alphanumeric(start: "btn_"), hover: fauxfactory.gen_alphanumeric(start: "hover_"), display_for: "Single entity", system: "Request", request: "InspectMe", None: exp)
-    yield [service_button_group, button, request.param]
+    yield([service_button_group, button, request.param])
     button.delete_if_exists()
   }
 end
@@ -178,7 +178,7 @@ def test_custom_button_automate_service_obj(request, appliance, context, submit,
       custom_button_group.item_select(button.text)
       if context === ViaUI
         diff = (appliance.version < "5.10") ? "executed" : "launched"
-        view.flash.assert_message()
+        view.flash.assert_message("\"#{button.text}\" was #{diff}")
       end
       expected_count = (submit == "Submit all") ? 1 : entity_count
       begin
@@ -234,7 +234,7 @@ def vis_enb_button(request, appliance, button_group)
   appliance.context.use(ViaUI) {
     button = group.buttons.create(text: fauxfactory.gen_alphanumeric(start: "btn_"), hover: fauxfactory.gen_alphanumeric(15, start: "btn_hvr_"), display_for: "Single entity", system: "Request", request: "InspectMe", None: exp)
   }
-  yield [button, request.param]
+  yield([button, request.param])
   button.delete_if_exists()
 end
 def test_custom_button_expression_service_obj(appliance, context, objects, button_group, vis_enb_button)
@@ -405,7 +405,7 @@ def test_custom_button_dialog_service_archived(request, appliance, provider, set
         begin
           wait_for(lambda{|| log.matches[request_pattern] == 1}, timeout: 180, message: "wait for expected match count", delay: 5)
         rescue TimedOutError
-          pytest.fail()
+          pytest.fail("Expected '1' requests; found '#{log.matches[request_pattern]}'")
         end
       }
     end
@@ -472,7 +472,7 @@ def unassigned_btn_setup(request, appliance, provider, gen_rest_service)
     destinations = [ViaUI]
   end
   gp = appliance.collections.button_groups.instantiate(text: "[Unassigned Buttons]", hover: "Unassigned buttons", type: request.param)
-  yield [obj, gp, destinations]
+  yield([obj, gp, destinations])
 end
 def test_custom_button_unassigned_behavior_objs(appliance, setup_provider, unassigned_btn_setup, request)
   #  Test unassigned custom button behavior

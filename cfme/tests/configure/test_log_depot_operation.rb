@@ -112,7 +112,7 @@ def configured_depot(log_depot, depot_machine_ip, appliance)
   #   It also provides a finalizer to disable the depot after test run.
   #   
   log_depot.machine_ip = depot_machine_ip
-  uri = 
+  uri = "#{log_depot.machine_ip}#{log_depot.access_dir}"
   server_log_depot = appliance.server.collect_logs
   update(server_log_depot) {
     server_log_depot.depot_type = log_depot.protocol
@@ -121,19 +121,19 @@ def configured_depot(log_depot, depot_machine_ip, appliance)
     server_log_depot.username = log_depot.credentials.username
     server_log_depot.password = log_depot.credentials.password
   }
-  yield server_log_depot
+  yield(server_log_depot)
   server_log_depot.clear()
 end
 def check_ftp(appliance, ftp, server_name, server_zone_id, check_contents: false)
-  server_string = 
+  server_string = "#{server_name}_#{server_zone_id}"
   ftp {
     date_group = "(_.*?){4}"
-    zip_files = ftp.filesystem.search(re.compile(), directories: false)
+    zip_files = ftp.filesystem.search(re.compile("^.*#{server_string}#{date_group}[.]zip$"), directories: false)
     raise "No logs found!" unless zip_files
     if is_bool(appliance.version >= "5.11" && !BZ(1706989).blocks)
-      models_files = ftp.filesystem.search(re.compile(), directories: false)
+      models_files = ftp.filesystem.search(re.compile("^Models_.*#{server_string}[.]zip$"), directories: false)
       raise "No models files found" unless models_files
-      dialogs_files = ftp.filesystem.search(re.compile(), directories: false)
+      dialogs_files = ftp.filesystem.search(re.compile("^Dialogs_.*#{server_string}[.]zip$"), directories: false)
       raise "No dialogs files found" unless dialogs_files
     end
   }
@@ -152,7 +152,7 @@ def check_ftp(appliance, ftp, server_name, server_zone_id, check_contents: false
             if is_bool(log.include?("ansible") && BZ(1751961).blocks)
               next
             end
-            result = log_ssh.run_command(, ensure_user: true)
+            result = log_ssh.run_command("unzip -l ~#{zip_file.path} | grep #{log}", ensure_user: true)
             raise unless result.output.include?(log)
             log_file_size = result.output.split()[0]
             raise "Log file is empty!" unless log_file_size.to_i > 0
@@ -160,7 +160,7 @@ def check_ftp(appliance, ftp, server_name, server_zone_id, check_contents: false
         }
       end
     rescue TypeError
-      raise  unless false
+      raise "Wrong file matching in #{zip_file.name} for #{log}" unless false
     end
     Datetime::datetimes.push([date_from, date_to, zip_file.name])
   end
@@ -174,7 +174,7 @@ end
 def service_request(appliance, ansible_catalog_item)
   request_descr = "Provisioning Service [{name}] from [{name}]".format(name: ansible_catalog_item.name)
   service_request_ = appliance.collections.requests.instantiate(description: request_descr)
-  yield service_request_
+  yield(service_request_)
   if is_bool(service_request_.exists())
     service_request_.remove_request()
   end
@@ -252,7 +252,7 @@ def test_collect_multiple_servers(log_depot, temp_appliance_preconfig, depot_mac
     ftp.recursively_delete()
   }
   appliance {
-    uri = 
+    uri = "#{log_depot.machine_ip}#{log_depot.access_dir}"
     update(collect_logs) {
       collect_logs.second_server_collect = from_secondary
       collect_logs.depot_type = log_depot.protocol
@@ -298,7 +298,7 @@ def test_collect_single_servers(log_depot, appliance, depot_machine_ip, request,
     ftp.cwd(ftp.upload_dir)
     ftp.recursively_delete()
   }
-  uri = 
+  uri = "#{log_depot.machine_ip}#{log_depot.access_dir}"
   collect_logs = is_bool(zone_collect) ? appliance.server.zone.collect_logs : appliance.server.collect_logs
   update(collect_logs) {
     collect_logs.depot_type = log_depot.protocol
@@ -343,7 +343,7 @@ def test_log_collection_over_ipv6(log_depot, depot_machine_ipv4_and_ipv6, applia
     ftp.cwd(ftp.upload_dir)
     ftp.recursively_delete()
   }
-  uri = 
+  uri = "#{ipv6}#{log_depot.access_dir}"
   collect_logs = appliance.server.collect_logs
   update(collect_logs) {
     collect_logs.depot_type = log_depot.protocol

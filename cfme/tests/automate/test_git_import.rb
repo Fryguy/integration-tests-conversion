@@ -27,14 +27,14 @@ def imported_domain(appliance)
   end
   repo = appliance.collections.automate_import_exports.instantiate(import_type: "git", url: GIT_REPO_URL, verify_ssl: false)
   domain = repo.import_domain_from(branch: "origin/master")
-  yield domain
+  yield(domain)
   domain.delete_if_exists()
 end
 def new_user(appliance)
   # This fixture creates new user which assigned with non-super group
   group = appliance.collections.groups.instantiate(description: "EvmGroup-administrator")
   user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(start: "user_").downcase(), credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: fauxfactory.gen_alphanumeric(start: "pwd")), email: fauxfactory.gen_email(), groups: [group], cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   user.delete_if_exists()
 end
 def test_automate_git_domain_removed_from_disk(appliance, imported_domain)
@@ -48,7 +48,7 @@ def test_automate_git_domain_removed_from_disk(appliance, imported_domain)
   #   
   imported_domain.delete()
   repo_path = urlparse(GIT_REPO_URL).path
-  raise unless appliance.ssh_client.run_command().success
+  raise unless (appliance.ssh_client.run_command("[ ! -d \"/var/www/vmdb/data/git_repos#{repo_path}\" ]")).success
 end
 def test_automate_git_domain_displayed_in_service(appliance)
   # Tests if a domain is displayed in a service.
@@ -273,7 +273,7 @@ def test_automate_git_import_case_insensitive(request, appliance)
   if GIT_REPO_URL === nil
     pytest.skip("No automate repo url available at cfme_data.automate_links.datastore_repositories.manageiq_automate")
   end
-  appliance.ssh_client.run_rake_command()
+  appliance.ssh_client.run_rake_command("evm:automate:import PREVIEW=false GIT_URL=#{GIT_REPO_URL}")
   domain = appliance.collections.domains.instantiate(name: "testdomain")
   request.addfinalizer(domain.delete_if_exists)
   raise unless domain.exists

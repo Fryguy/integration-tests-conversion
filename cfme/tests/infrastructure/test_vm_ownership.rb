@@ -109,7 +109,7 @@ def small_vm(provider, small_template)
   vm = provider.appliance.collections.infra_vms.instantiate(random_vm_name(context: "rename"), provider, small_template.name)
   vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   vm.refresh_relationships()
-  yield vm
+  yield(vm)
   if is_bool(vm.exists)
     vm.cleanup_on_provider()
   end

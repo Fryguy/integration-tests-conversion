@@ -28,7 +28,7 @@ def cls(appliance)
   domain = appliance.collections.domains.create(name: fauxfactory.gen_alphanumeric(12, start: "domain_"), enabled: true)
   original_class = domain.parent.instantiate(name: "ManageIQ").namespaces.instantiate(name: "System").classes.instantiate(name: "Request")
   original_class.copy_to(domain: domain)
-  yield domain.namespaces.instantiate(name: "System").classes.instantiate(name: "Request")
+  yield(domain.namespaces.instantiate(name: "System").classes.instantiate(name: "Request"))
   if is_bool(domain.exists)
     domain.delete()
   end
@@ -41,14 +41,14 @@ def method(cls)
             vm.remote_console_url = \"http://example.com\"
             "))
   instance = cls.instances.create(name: fauxfactory.gen_alphanumeric(start: "inst_"), fields: {"meth1" => {"value" => meth.name}})
-  yield instance
+  yield(instance)
   meth.delete_if_exists()
   instance.delete_if_exists()
 end
 def button_group(appliance, request)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: collection.getattr(request.param))
-  yield [button_gp, request.param]
+  yield([button_gp, request.param])
   button_gp.delete_if_exists()
 end
 def setup_obj(button_group, provider)
@@ -73,7 +73,7 @@ def setup_obj(button_group, provider)
       end
     end
   rescue IndexError
-    pytest.skip()
+    pytest.skip("Object not found for #{obj_type} type")
   end
   return obj
 end
@@ -171,7 +171,7 @@ def test_custom_button_automate_infra_obj(appliance, request, submit, setup_obj,
     log.start_monitoring()
     custom_button_group.item_select(button.text)
     diff = (appliance.version < "5.10") ? "executed" : "launched"
-    view.flash.assert_message()
+    view.flash.assert_message("\"#{button.text}\" was #{diff}")
     expected_count = (submit == "Submit all") ? 1 : entity_count
     begin
       wait_for(lambda{|| log.matches[request_pattern] == expected_count}, timeout: 300, message: "wait for expected match count", delay: 5)
@@ -327,7 +327,7 @@ def test_custom_button_open_url_infra_obj(request, setup_obj, button_group, meth
   main_window = view.browser.selenium.current_window_handle
   custom_button_group.item_select(button.text)
   wait_for(lambda{|| view.browser.selenium.window_handles.size > initial_count}, timeout: 120, message: "Check for window open")
-  open_url_window = Set.new(view.browser.selenium.window_handles) - 
+  open_url_window = Set.new(view.browser.selenium.window_handles) - Set.new([main_window])
   view.browser.selenium.switch_to_window(open_url_window.pop())
   _reset_window = lambda do
     if view.browser.selenium.current_window_handle != main_window

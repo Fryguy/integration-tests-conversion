@@ -25,9 +25,9 @@ def test_catalog_crud(request, appliance)
   view = cat.create_view(CatalogsView, wait: "10s")
   raise unless view.is_displayed
   if is_bool(BZ(1766276, forced_streams: ["5.11"]).blocks)
-    saved_message = 
+    saved_message = "Catalog was saved"
   else
-    saved_message = 
+    saved_message = "Catalog \"#{catalog_name}\" was saved"
   end
   view.flash.assert_success_message(saved_message)
   raise unless cat.exists
@@ -42,14 +42,14 @@ def test_catalog_crud(request, appliance)
   view.cancel_button.click()
   view = cat.create_view(DetailsCatalogView, wait: "10s")
   raise unless view.is_displayed
-  view.flash.assert_message()
+  view.flash.assert_message("Edit of Catalog \"#{catalog_name}\" was cancelled by the user")
   raise unless cat.description == update_descr
   cat.delete()
   view = cat.create_view(CatalogsView, wait: "10s")
   if is_bool(BZ(1765107).blocks)
-    delete_message = 
+    delete_message = "Catalog \"#{cat.description}\": Delete successful"
   else
-    delete_message = 
+    delete_message = "Catalog \"#{catalog_name}\": Delete successful"
   end
   view.flash.assert_success_message(delete_message)
   raise unless !cat.exists

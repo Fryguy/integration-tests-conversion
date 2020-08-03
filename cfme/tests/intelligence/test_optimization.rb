@@ -55,7 +55,7 @@ def test_delete_generated_report(appliance)
   old_run = optimization_report.runs
   run_at_time = opt_saved_report.run_at.split()[1]
   if is_bool(BZ(1769333).blocks)
-    run_at_time = Datetime::strftime(Datetime::strptime(, "%I:%M:%S %p"), "%H:%M:%S")
+    run_at_time = Datetime::strftime(Datetime::strptime("#{opt_saved_report.run_at.split()[1]} #{opt_saved_report.run_at.split()[2]}", "%I:%M:%S %p"), "%H:%M:%S")
   end
   view = navigate_to(optimization_report.collections.saved_reports, "All")
   begin

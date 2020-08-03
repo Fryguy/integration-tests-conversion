@@ -103,7 +103,7 @@ def test_crud_imported_domains(import_data, temp_appliance_preconfig)
       domain.description = fauxfactory.gen_alpha()
     }
     domain.delete()
-    view.flash.assert_message()
+    view.flash.assert_message("Automate Domain \"#{domain.description}\": Delete successful")
   end
 end
 def setup_automate_model(appliance)
@@ -111,7 +111,7 @@ def setup_automate_model(appliance)
   domain = appliance.collections.domains.create(name: "bz_1440226", description: fauxfactory.gen_alpha(), enabled: true)
   namespace = domain.namespaces.create(name: "test_name", description: fauxfactory.gen_alpha())
   klass = namespace.classes.create(name: "test_class", display_name: "test_class_display", description: fauxfactory.gen_alpha())
-  yield [domain, namespace, klass]
+  yield([domain, namespace, klass])
   klass.delete_if_exists()
   namespace.delete_if_exists()
   domain.delete_if_exists()
@@ -146,7 +146,7 @@ end
 def local_domain(appliance)
   # This fixture used to create automate domain - Datastore/Domain
   domain = appliance.collections.domains.create(name: "bz_1753860", description: fauxfactory.gen_alpha(), enabled: true)
-  yield domain
+  yield(domain)
   domain.enabled = domain.rest_api_entity.enabled
   domain.delete_if_exists()
 end
@@ -178,8 +178,8 @@ def test_overwrite_import_domain(local_domain, appliance, file_name)
   #   
   datastore_file = FTPClientWrapper(cfme_data.ftpserver.entities.datastores).get_file(file_name)
   file_path = File.join("/tmp",datastore_file.name)
-  raise unless appliance.ssh_client.run_command().success
-  rake_cmd = ["false", "true"].map{|enable|[enable, ]}.to_h
+  raise unless (appliance.ssh_client.run_command("curl -o #{file_path} ftp://#{datastore_file.link}")).success
+  rake_cmd = ["false", "true"].map{|enable|[enable, "evm:automate:import PREVIEW=false DOMAIN=bz_1753860 IMPORT_AS=bz_1753860 ZIP_FILE=#{file_path} SYSTEM=false ENABLED=#{enable} OVERWRITE=true"]}.to_h
   for (status, cmd) in rake_cmd.to_a()
     appliance.ssh_client.run_rake_command(cmd)
     view = navigate_to(local_domain.parent, "All")

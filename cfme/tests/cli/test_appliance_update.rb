@@ -47,7 +47,7 @@ def pytest_generate_tests(metafunc)
         z_version = split_ver[2].to_i
       rescue [IndexError, TypeError] => e
         logger.exception("Couldn't parse version: %s, skipping", e)
-        versions.push(pytest.param(, marks: pytest.mark.uncollect(reason: )))
+        versions.push(pytest.param("bad:#{version}", marks: pytest.mark.uncollect(reason: "Could not parse z_version from: #{version}")))
       end
     else
       versions.push(old_version_pytest_arg)
@@ -81,10 +81,10 @@ def appliance_preupdate(old_version, appliance, request)
   end
   apps[0].db.extend_partition()
   urls = cfme_data["basic_info"][update_url]
-  apps[0].ssh_client.run_command()
+  apps[0].ssh_client.run_command("curl #{urls} -o /etc/yum.repos.d/update.repo")
   logger.info("Appliance update.repo file: 
 %s", (apps[0].ssh_client.run_command("cat /etc/yum.repos.d/update.repo")).output)
-  yield apps[0]
+  yield(apps[0])
   apps[0].ssh_client.close()
   sprout.destroy_pool(pool_id)
 end
@@ -92,12 +92,12 @@ def do_yum_update(appliance)
   appliance.evmserverd.stop()
   appliance.ssh_client {|ssh|
     result = ssh.run_command("yum update -y", timeout: 3600)
-    raise  unless result.success
+    raise "update failed #{result.output}" unless result.success
   }
   output = result.to_s
   rpmnew_regex = "warning: (.*) created as (.*\\.rpmnew)"
   groups = re.findall(rpmnew_regex, output)
-  groups.map{|rpmold, rpmnew| ssh.run_command()}
+  groups.map{|rpmold, rpmnew| ssh.run_command("mv #{rpmnew} #{rpmold}")}
   output = filter(lambda{|x| !re.match(rpmnew_regex, x)}, result.output.split("
 ")).join("
 ")
@@ -121,7 +121,9 @@ def test_update_yum(appliance_preupdate, appliance)
   result = appliance_preupdate.ssh_client.run_command("cat /var/www/miq/vmdb/VERSION")
   raise unless appliance.version.include?(result.output)
   matches = re.search("error|warning|fail", update_output, re.IGNORECASE)
-  raise  unless !matches
+  raise "update output contains #{matches.group()}
+
+#{update_output}" unless !matches
 end
 def test_update_webui(appliance_with_providers, appliance, request, old_version)
   #  Tests updating an appliance with providers, also confirms that the

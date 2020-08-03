@@ -44,7 +44,7 @@ def set_default(provider, request)
   #      must be used in all tests of quota which are related to services where catalog item needs to
   #      be created with specific values for these entries.
   #   
-  with_prov = ["Datastore", "ManageIQ (Locked)", , "VM", "Provisioning", "StateMachines", "ProvisionRequestApproval", "Default (Default)"]
+  with_prov = ["Datastore", "ManageIQ (Locked)", "#{provider.string_name}", "VM", "Provisioning", "StateMachines", "ProvisionRequestApproval", "Default (Default)"]
   default = ["Service", "Provisioning", "StateMachines", "ServiceProvision_Template", "CatalogItemInitialization"]
   return is_bool(request.param) ? with_prov : default
 end
@@ -62,7 +62,7 @@ def tenants_setup(appliance)
   my_company = tenants.get_root_tenant()
   test_parent = tenants.create(name: fauxfactory.gen_alphanumeric(18, start: "test_parent_"), description: fauxfactory.gen_alphanumeric(18, start: "parent_desc_"), parent: my_company)
   test_child = tenants.create(name: fauxfactory.gen_alphanumeric(18, start: "test_child_"), description: fauxfactory.gen_alphanumeric(18, start: "child_desc_"), parent: test_parent)
-  yield [test_parent, test_child]
+  yield([test_parent, test_child])
   test_child.delete()
   test_parent.delete()
 end
@@ -77,15 +77,15 @@ def custom_prov_data(request, prov_data, vm_name, template_name)
 end
 def set_root_tenant_quota(request, root_tenant, appliance)
   field,value = request.param
-  root_tenant.set_quota(None: { => true, "field" => value})
+  root_tenant.set_quota(None: {"#{field}_cb" => true, "field" => value})
   yield
   appliance.server.browser.refresh()
-  root_tenant.set_quota(None: { => false})
+  root_tenant.set_quota(None: {"#{field}_cb" => false})
 end
 def catalog_item(appliance, provider, dialog, catalog, prov_data, set_default)
   collection = appliance.collections.catalog_items
   catalog_item = collection.create(provider.catalog_item_type, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: "test catalog", display_in: true, catalog: catalog, dialog: dialog, prov_data: prov_data, provider: provider, provisioning_entry_point: set_default)
-  yield catalog_item
+  yield(catalog_item)
   if is_bool(catalog_item.exists)
     catalog_item.delete()
   end
@@ -99,13 +99,13 @@ def migration_destination_host(create_vm_modscope, provider)
     dest_hosts = hosts.select{|vds| vds.name != vm_host}.map{|vds| vds.name}
     return dest_hosts[0]
   else
-    pytest.skip()
+    pytest.skip("Not enough hosts exist on provider #{provider.name} for VM migration.")
   end
 end
 def quota_limit(root_tenant)
   in_use_storage = root_tenant.quota["storage"]["in_use"].strip(" GB").to_i
   root_tenant.set_quota(storage_cb: true, storage: in_use_storage + 3)
-  yield root_tenant.quota["storage"]["available"].strip(" GB").to_i
+  yield(root_tenant.quota["storage"]["available"].strip(" GB").to_i)
   root_tenant.set_quota(storage_cb: false)
 end
 def test_tenant_quota_enforce_via_lifecycle_infra(appliance, provider, set_root_tenant_quota, extra_msg, custom_prov_data, approve, prov_data, vm_name, template_name)
@@ -121,7 +121,7 @@ def test_tenant_quota_enforce_via_lifecycle_infra(appliance, provider, set_root_
   prov_data.update(custom_prov_data)
   prov_data["catalog"]["vm_name"] = vm_name
   do_vm_provisioning(appliance, template_name: template_name, provider: provider, vm_name: vm_name, provisioning_data: prov_data, wait: false, request: nil)
-  request_description = 
+  request_description = "Provision from [#{template_name}] to [#{vm_name}#{extra_msg}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   if is_bool(approve)
     provision_request.approve_request(method: "ui", reason: "Approved")
@@ -170,9 +170,9 @@ def test_tenant_quota_vm_reconfigure(request, appliance, set_root_tenant_quota, 
   setattr(new_config.hw, custom_prov_data["change"], custom_prov_data["value"])
   vm.reconfigure(new_config)
   if custom_prov_data["change"] == "mem_size"
-    request_description = 
+    request_description = "VM Reconfigure for: #{vm.name} - Memory: #{new_config.hw.mem_size} MB"
   else
-    request_description = 
+    request_description = "VM Reconfigure for: #{vm.name} - Processor Sockets: #{new_config.hw.sockets}, Processor Cores Per Socket: #{new_config.hw.cores_per_socket}, Total Processors: #{new_config.hw.cores_per_socket * new_config.hw.sockets}"
   end
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
@@ -218,7 +218,7 @@ def test_vm_migration_after_assigning_tenant_quota(appliance, create_vm_modscope
   cells = {"Description" => request_description, "Request Type" => "Migrate"}
   migrate_request = appliance.collections.requests.instantiate(request_description, cells: cells, partial_check: true)
   migrate_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{migrate_request.row.last_message.text}"
   raise msg unless migrate_request.is_succeeded(method: "ui")
 end
 def test_service_infra_tenant_quota_with_default_entry_point(request, appliance, context, set_root_tenant_quota, extra_msg, set_default, custom_prov_data, catalog_item)
@@ -270,7 +270,7 @@ def configure_mail(domain)
   update(instance) {
     instance.fields = {"approver" => {"value" => approver}, "default_recipient" => {"value" => default_recipient}, "from" => {"value" => from_user}}
   }
-  yield [approver, default_recipient, from_user]
+  yield([approver, default_recipient, from_user])
 end
 def test_quota_exceed_mail_with_more_info_link(configure_mail, appliance, provider, set_root_tenant_quota, custom_prov_data, prov_data, extra_msg, vm_name, template_name)
   # 
@@ -299,9 +299,9 @@ def test_quota_exceed_mail_with_more_info_link(configure_mail, appliance, provid
   mail_to = fauxfactory.gen_email()
   prov_data.update(custom_prov_data)
   prov_data["catalog"]["vm_name"] = vm_name
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [, ])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: ["\"to\"=>\"#{default_recipient}\", \"from\"=>\"#{from_user}\".*.Virtual Machine Request from #{mail_to} was Denied.\"", "\"to\"=>\"#{mail_to}\", \"from\"=>\"#{from_user}\".*.Your Virtual Machine Request was Approved, pending Quota Validation.\".*"])).waiting(timeout: 120) {
     do_vm_provisioning(appliance, template_name: template_name, provider: provider, vm_name: vm_name, provisioning_data: prov_data, wait: false, request: nil, email: mail_to)
-    request_description = 
+    request_description = "Provision from [#{template_name}] to [#{vm_name}#{extra_msg}]"
     provision_request = appliance.collections.requests.instantiate(request_description)
     provision_request.wait_for_request(method: "ui")
     raise unless provision_request.row.reason.text == "Quota Exceeded"
@@ -365,19 +365,19 @@ def new_project(appliance, new_tenants)
   tenant1,_ = new_tenants
   collection = appliance.collections.projects
   project = collection.create(name: fauxfactory.gen_alphanumeric(15, start: "project_"), description: fauxfactory.gen_alphanumeric(15, start: "project_desc_"), parent: tenant1)
-  yield project
+  yield(project)
   project.delete_if_exists()
 end
 def set_project_quota(request, appliance, new_project)
   field_value = request.param
   tenant_quota_data = {}
   for (field, value) in field_value
-    tenant_quota_data.update({ => true, "field" => value})
+    tenant_quota_data.update({"#{field}_cb" => true, "field" => value})
   end
   new_project.set_quota(None: tenant_quota_data)
   yield
   for (field, value) in field_value
-    tenant_quota_data.update({ => false})
+    tenant_quota_data.update({"#{field}_cb" => false})
     tenant_quota_data.pop(field)
   end
   new_project.set_quota(None: tenant_quota_data)
@@ -386,15 +386,15 @@ def new_group_project(appliance, new_project)
   # This fixture creates new group and assigned by new project
   role = appliance.collections.roles.instantiate(name: "EvmRole-user_self_service")
   user_role = role.copy(name: fauxfactory.gen_alphanumeric(25, "self_service_role_"), vm_restriction: "None")
-  group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: user_role.name, tenant: )
-  yield group
+  group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: user_role.name, tenant: "My Company/#{new_project.parent_tenant.name}/#{new_project.name}")
+  yield(group)
   group.delete_if_exists()
   user_role.delete_if_exists()
 end
 def new_user_project(appliance, new_group_project)
   # This fixture creates new user which is assigned to new group and project
   user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(start: "user_").downcase(), credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: fauxfactory.gen_alphanumeric(start: "pwd")), email: fauxfactory.gen_email(), groups: new_group_project, cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   user.delete_if_exists()
 end
 def test_simultaneous_tenant_quota(request, appliance, context, new_project, new_user_project, set_project_quota, custom_prov_data, catalog_item, set_default)

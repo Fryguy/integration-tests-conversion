@@ -68,7 +68,7 @@ def test_cluster_graph_screen(provider, cluster, host, graph_type, interval, ena
   end
   wait_for(lambda{|| graph.all_legends.size > 0}, delay: 5, timeout: 200, fail_func: refresh)
   graph_zoom = ["cluster_host", "cluster_vm"]
-  avg_graph = (graph_zoom.include?(graph_type)) ? graph_type : 
+  avg_graph = (graph_zoom.include?(graph_type)) ? graph_type : "#{graph_type}_vm_host_avg"
   begin
     avg_graph = view.getattr(avg_graph)
   rescue NoMethodError => e

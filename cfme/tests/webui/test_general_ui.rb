@@ -85,7 +85,7 @@ def import_tags(appliance)
     end
   rescue RuntimeError
     for script in scripts
-      client.run_command()
+      client.run_command("cd /var/www/miq/vmdb/lib/tasks/ && rm -f #{script}")
     end
     pytest.skip("Not all scripts were successfully downloaded")
   end
@@ -105,9 +105,9 @@ def import_tags(appliance)
     category_name = category_tags.pop(0).strip().gsub("- description: ", "")
     tags[category_name] = category_tags
   end
-  yield tags
+  yield(tags)
   for script in scripts
-    client.run_command()
+    client.run_command("cd /var/www/miq/vmdb/lib/tasks/ && rm -f #{script}")
   end
   client.run_command("cd /tmp && rm -f tags.yml*")
 end
@@ -121,15 +121,15 @@ def set_help_menu_options(appliance)
   product_title = fauxfactory.gen_alpha()
   about_title = fauxfactory.gen_alpha()
   region.set_help_menu_configuration({"documentation_title" => documentation_title, "product_title" => product_title, "about_title" => about_title})
-  yield [documentation_title, product_title, about_title]
+  yield([documentation_title, product_title, about_title])
   region.set_help_menu_configuration({"documentation_title" => original_documentation_title, "product_title" => original_product_title, "about_title" => original_about_title})
 end
 def create_20k_vms(appliance)
   rails_create_command = "20000.times { |i| ManageIQ::Providers::Vmware::InfraManager::Vm.create :name => \"vm_%05d\" % (1+i), :vendor => \"vmware\", :location => \"foo\" }"
   rails_cleanup_command = "20000.times { |i| ManageIQ::Providers::Vmware::InfraManager::Vm.where(:name => \"vm_%05d\" % (1+i)).first.delete}"
-  appliance.ssh_client.run_rails_command()
+  appliance.ssh_client.run_rails_command("'#{rails_create_command}'")
   yield
-  appliance.ssh_client.run_rails_command()
+  appliance.ssh_client.run_rails_command("'#{rails_cleanup_command}'")
 end
 def vm(request, provider, appliance)
   return _vm(request, provider, appliance)
@@ -167,7 +167,7 @@ def test_configuration_large_number_of_tags(appliance, import_tags, soft_assert)
     category = category.gsub("  ", " ")
     for tag in tags
       tag = tag.strip()
-      soft_assert.(view.entities.my_company_tags.tree.has_path(category, tag), )
+      soft_assert.(view.entities.my_company_tags.tree.has_path(category, tag), "Tag #{tag} was not imported")
     end
   end
 end
@@ -187,7 +187,7 @@ def test_configuration_help_menu(appliance, set_help_menu_options, soft_assert)
   #   
   view = navigate_to(appliance.server, "Dashboard")
   for option in set_help_menu_options
-    soft_assert.(view.help.has_item(option), )
+    soft_assert.(view.help.has_item(option), "#{option} option is not available in help menu")
   end
 end
 def test_automate_can_edit_copied_method(appliance, request)
@@ -452,7 +452,7 @@ def test_infrastructure_provider_left_panel_titles(setup_provider, provider, opt
   for panel in ALL_OPTIONS[option]
     accordion.tree.select(partial_match(panel))
     test_view = provider.create_view(ALL_OPTIONS[option][panel])
-    soft_assert.(test_view.is_displayed, )
+    soft_assert.(test_view.is_displayed, "#{test_view} not displayed.")
   end
 end
 def test_provider_documentation(temp_appliance_preconfig_funcscope, provider, has_no_providers, request)
@@ -476,7 +476,7 @@ def test_provider_documentation(temp_appliance_preconfig_funcscope, provider, ha
   #       expectedResults:
   #           1. Link must point to downstream documentation and not upstream.
   #   
-  url = 
+  url = "https://access.redhat.com/documentation/en-us/red_hat_cloudforms/5.0/html/managing_providers/#{PROVIDERS[provider]}"
   destination = ([AnsibleTowerProvider, SatelliteProvider].include?(provider)) ? "AllOfType" : "All"
   view = navigate_to(provider, destination)
   initial_count = view.browser.window_handles.size
@@ -484,7 +484,7 @@ def test_provider_documentation(temp_appliance_preconfig_funcscope, provider, ha
   href = Text(view, locator: "//*[@id=\"main_div\"]//a[contains(normalize-space(.), \"in the documentation\")]")
   href.click()
   wait_for(lambda{|| view.browser.window_handles.size > initial_count}, timeout: 30, message: "Check for window open")
-  open_url_window = (Set.new(view.browser.window_handles) - ).pop()
+  open_url_window = (Set.new(view.browser.window_handles) - Set.new([main_window])).pop()
   view.browser.switch_to_window(open_url_window)
   _reset_window = lambda do
     view.browser.close_window(open_url_window)

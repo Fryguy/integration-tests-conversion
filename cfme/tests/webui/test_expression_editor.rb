@@ -23,9 +23,15 @@ def test_exp_editor_delete_operator(appliance, operator)
   #   
   view = navigate_to(appliance.collections.volumes, "All")
   name = fauxfactory.gen_alphanumeric()
-  view.entities.search.save_filter(, name)
+  view.entities.search.save_filter("
+        fill_field(#{filter_option}, =, #{filter_value});
+        select_expression_text;
+        click_#{operator};
+        #{(operator != "not") ? "fill_field(#{filter_option}, =, #{filter_value});" : ""}
+        select_expression_text;
+        click_remove;", name)
   editor = view.search.advanced_search_form.search_exp_editor
-  raise unless editor.expression_text == 
+  raise unless editor.expression_text == "#{filter_option} = \"#{filter_value}\""
   view.entities.search.delete_filter()
   view.entities.search.close_advanced_search()
 end

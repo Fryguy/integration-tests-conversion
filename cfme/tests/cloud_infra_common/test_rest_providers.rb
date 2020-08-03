@@ -116,7 +116,7 @@ def test_provider_refresh(provider_rest, appliance)
   if is_bool(task_id)
     task = appliance.rest_api.get_entity("tasks", task_id)
     wait_for(lambda{|| ["finished", "queued"].include?(task.state.downcase())}, fail_func: task.reload, num_sec: 30)
-    raise  unless task.status.downcase() == "ok"
+    raise "Task failed with status '#{task.status}'" unless task.status.downcase() == "ok"
   end
 end
 def test_provider_edit(request, provider_rest, appliance)

@@ -20,7 +20,7 @@ def test_configure_vmdb_last_start_time(appliance)
   db_last_start_time = appliance.db.client.session.execute("select pg_postmaster_start_time() at time zone 'utc'").first()[0].strftime("%Y-%m-%d %H:%M:%S")
   view = navigate_to(appliance.server, "DatabaseSummary")
   ui_last_start_time = parser.parse(view.properties.get_text_of("Last Start Time")).strftime("%Y-%m-%d %H:%M:%S")
-  raise  unless ui_last_start_time == db_last_start_time
+  raise "Last start time #{ui_last_start_time} does not match DB value #{db_last_start_time}." unless ui_last_start_time == db_last_start_time
 end
 def test_configuration_database_garbage_collection(appliance)
   # 

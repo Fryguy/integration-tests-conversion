@@ -27,7 +27,7 @@ SUBMIT = ["Submit all", "One by one"]
 def button_group(appliance, request)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: collection.getattr(request.param))
-  yield [button_gp, request.param]
+  yield([button_gp, request.param])
   button_gp.delete_if_exists()
 end
 def setup_objs(button_group, provider)
@@ -65,7 +65,7 @@ def setup_objs(button_group, provider)
                   if obj_type == "CLOUD_NETWORK"
                     obj = [provider.appliance.collections.cloud_networks.all()[0]]
                   else
-                    logger.error()
+                    logger.error("No object collected for custom button object type '#{obj_type}'")
                   end
                 end
               end
@@ -220,7 +220,7 @@ def test_custom_button_automate_cloud_obj(appliance, request, submit, setup_objs
       raise unless appliance.ssh_client.run_command("echo -n \"\" > /var/www/miq/vmdb/log/automation.log")
       custom_button_group.item_select(button.text)
       diff = (appliance.version < "5.10") ? "executed" : "launched"
-      view.flash.assert_message()
+      view.flash.assert_message("\"#{button.text}\" was #{diff}")
       expected_count = (submit == "Submit all") ? 1 : entity_count
       begin
         wait_for(log_request_check, [appliance, expected_count], timeout: 300, message: "Check for expected request count", delay: 10)

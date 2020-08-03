@@ -36,10 +36,10 @@ def vm_ownership(enable_candu, provider, appliance)
   vm.mgmt.ensure_state(VmState.RUNNING)
   group_collection = appliance.collections.groups
   cb_group = group_collection.instantiate(description: "EvmGroup-user")
-  user = appliance.collections.users.create(name: , credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: "secret"), email: "abc@example.com", groups: cb_group, cost_center: "Workload", value_assign: "Database")
+  user = appliance.collections.users.create(name: "#{provider.name}_#{fauxfactory.gen_alphanumeric()}", credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: "secret"), email: "abc@example.com", groups: cb_group, cost_center: "Workload", value_assign: "Database")
   vm.set_ownership(user: user)
-  logger.info()
-  yield user.name
+  logger.info("Assigned VM OWNERSHIP for #{vm_name} running on #{provider.name}")
+  yield(user.name)
   vm.unset_ownership()
   if is_bool(user)
     user.delete()
@@ -92,7 +92,7 @@ def verify_records_metrics_table(appliance, provider)
   ems = appliance.db.client["ext_management_systems"]
   metrics = appliance.db.client["metrics"]
   ret = appliance.ssh_client.run_rails_command("\"vm = Vm.where(:ems_id => {}).where(:name => {})[0];        vm.perf_capture(\'realtime\', 1.hour.ago.utc, Time.now.utc)\"".format(provider.id, repr(vm_name)))
-  raise  unless ret.success
+  raise "Failed to capture VM C&U data:" unless ret.success
   appliance.db.client.transaction {
     result = ems, metrics.parent_ems_id == ems.id.appliance.db.client.session.query(metrics.id).join.filter(metrics.capture_interval_name == "realtime", metrics.resource_name == vm_name, ems.name == provider.name, metrics.timestamp >= date.today())
   }
@@ -124,7 +124,7 @@ def resource_usage(vm_ownership, appliance, provider)
   wait_for(method(:verify_records_metrics_table), [appliance, provider], timeout: 600, message: "Waiting for VM real-time data")
   appliance.server.settings.disable_server_roles("ems_metrics_coordinator", "ems_metrics_collector")
   ret = appliance.ssh_client.run_rails_command("\"vm = Vm.where(:ems_id => {}).where(:name => {})[0];        vm.perf_rollup_range(1.hour.ago.utc, Time.now.utc,\'realtime\')\"".format(provider.id, repr(vm_name)))
-  raise  unless ret.success
+  raise "Failed to rollup VM C&U data:" unless ret.success
   wait_for(method(:verify_records_rollups_table), [appliance, provider], timeout: 600, message: "Waiting for hourly rollups")
   appliance.db.client.transaction {
     result = ems, rollups.parent_ems_id == ems.id.appliance.db.client.session.query(rollups.id).join.filter(rollups.capture_interval_name == "hourly", rollups.resource_name == vm_name, ems.name == provider.name, rollups.timestamp >= date.today())
@@ -183,12 +183,12 @@ def chargeback_report_custom(appliance, vm_ownership, assign_custom_rate, interv
   owner = vm_ownership
   data = {"menu_name" => interval, "title" => interval, "base_report_on" => "Chargeback for Vms", "report_fields" => ["Memory Used", "Memory Used Cost", "Owner", "CPU Used", "CPU Used Cost", "Disk I/O Used", "Disk I/O Used Cost", "Network I/O Used", "Network I/O Used Cost", "Storage Used", "Storage Used Cost"], "filter" => {"filter_show_costs" => "Owner", "filter_owner" => owner, "interval_end" => "Today (partial)"}}
   report = appliance.collections.reports.create(is_candu: true, None: data)
-  logger.info()
+  logger.info("Queuing chargeback report for #{interval} rate")
   report.queue(wait_for_finish: true)
   if is_bool(!report.saved_reports.all()[0].data.rows.to_a)
     pytest.skip("Empty report")
   else
-    yield report.saved_reports.all()[0].data.rows.to_a
+    yield(report.saved_reports.all()[0].data.rows.to_a)
   end
   if is_bool(report.exists)
     report.delete()
@@ -196,14 +196,14 @@ def chargeback_report_custom(appliance, vm_ownership, assign_custom_rate, interv
 end
 def new_compute_rate(appliance, interval)
   # Create a new Compute Chargeback rate
-  desc = fauxfactory.gen_alphanumeric(20, start: )
+  desc = fauxfactory.gen_alphanumeric(20, start: "custom_#{interval}")
   begin
     compute = appliance.collections.compute_rates.create(description: desc, fields: {"Used CPU" => {"per_time" => interval, "variable_rate" => "720"}, "Used Disk I/O" => {"per_time" => interval, "variable_rate" => "720"}, "Used Network I/O" => {"per_time" => interval, "variable_rate" => "720"}, "Used Memory" => {"per_time" => interval, "variable_rate" => "720"}})
     storage = appliance.collections.storage_rates.create(description: desc, fields: {"Used Disk Storage" => {"per_time" => interval, "variable_rate" => "720"}})
   rescue Exception => ex
     pytest.fail(("Exception while creating compute/storage rates for chargeback long term rate tests. {}").format(ex))
   end
-  yield desc
+  yield(desc)
   for entity in [compute, storage]
     begin
       entity.delete_if_exists()

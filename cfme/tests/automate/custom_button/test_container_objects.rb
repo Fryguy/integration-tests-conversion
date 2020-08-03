@@ -24,7 +24,7 @@ DISPLAY_NAV = {"Single entity" => ["Details"], "List" => ["All"], "Single and li
 def button_group(appliance, request)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: collection.getattr(request.param))
-  yield [button_gp, request.param]
+  yield([button_gp, request.param])
   button_gp.delete_if_exists()
 end
 def setup_obj(appliance, provider, button_group)
@@ -37,10 +37,10 @@ def setup_obj(appliance, provider, button_group)
       obj = appliance.collections.getattr(obj_type.downcase()).all()[0]
     end
   rescue IndexError
-    pytest.skip()
+    pytest.skip("Object not found for #{obj_type} type")
   end
   if is_bool(!obj.exists)
-    pytest.skip()
+    pytest.skip("#{obj_type} object not exist")
   end
   return obj
 end

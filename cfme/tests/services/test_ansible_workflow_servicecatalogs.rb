@@ -17,10 +17,10 @@ def ansible_workflow_catitem(appliance, provider, dialog, catalog, workflow_type
   begin
     template = config_manager_obj.data["provisioning_data"][workflow_type]
   rescue KeyError
-    pytest.skip()
+    pytest.skip("No such Ansible template: #{workflow_type} found in cfme_data.yaml")
   end
-  catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ANSIBLE_TOWER, name: dialog.label, description: "my catalog", display_in: true, catalog: catalog, dialog: dialog, provider: , config_template: template)
-  yield catalog_item
+  catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ANSIBLE_TOWER, name: dialog.label, description: "my catalog", display_in: true, catalog: catalog, dialog: dialog, provider: "#{provider_name} Automation Manager", config_template: template)
+  yield(catalog_item)
   catalog_item.delete_if_exists()
 end
 def test_tower_workflow_item(appliance, ansible_workflow_catitem, workflow_type, ansible_api_version_change)
@@ -40,7 +40,7 @@ def test_tower_workflow_item(appliance, ansible_workflow_catitem, workflow_type,
   cells = {"Description" => ansible_workflow_catitem.name}
   order_request = appliance.collections.requests.instantiate(cells: cells, partial_check: true)
   order_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{order_request.row.last_message.text}"
   raise msg unless order_request.is_succeeded(method: "ui")
   appliance.user.my_settings.default_views.set_default_view("Configuration Management Providers", "List View")
 end
@@ -61,7 +61,7 @@ def test_retire_ansible_workflow(appliance, ansible_workflow_catitem, workflow_t
   cells = {"Description" => ansible_workflow_catitem.name}
   order_request = appliance.collections.requests.instantiate(cells: cells, partial_check: true)
   order_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Request failed with the message #{order_request.row.last_message.text}"
   raise msg unless order_request.is_succeeded(method: "ui")
   myservice = MyService(appliance, ansible_workflow_catitem.name)
   myservice.retire()

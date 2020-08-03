@@ -19,7 +19,7 @@ def download(objecttype, extension)
     view.toolbar.download.item_select("Print or export as PDF")
     handle_extra_tabs(view)
   else
-    view.toolbar.download.item_select()
+    view.toolbar.download.item_select("Download as #{extensions_mapping[extension]}")
   end
 end
 def download_summary(spec_object)
@@ -69,6 +69,6 @@ def test_download_pdf_summary(appliance, collection_type, provider)
     random_obj = random.choice(all_entities)
     download_summary(random_obj)
   else
-    pytest.skip()
+    pytest.skip("#{collection_type} entities not available")
   end
 end

@@ -37,7 +37,7 @@ include Cfme::Utils::Wait
 pytestmark = [pytest.mark.long_running, pytest.mark.tier(2), test_requirements.snapshot, pytest.mark.provider([RHEVMProvider, VMwareProvider], scope: "module")]
 def new_snapshot(test_vm, has_name: true, memory: false, create_description: true)
   name = fauxfactory.gen_alphanumeric(8)
-  return InfraVm.Snapshot(name: is_bool(has_name) ?  : nil, description: is_bool(create_description) ?  : nil, memory: memory, parent_vm: test_vm)
+  return InfraVm.Snapshot(name: is_bool(has_name) ? "test_snapshot_#{name}" : nil, description: is_bool(create_description) ? "snapshot_#{name}" : nil, memory: memory, parent_vm: test_vm)
 end
 def test_memory_checkbox(create_vm, provider, soft_assert)
   # Tests snapshot memory checkbox
@@ -369,7 +369,7 @@ def test_snapshot_history_btn(create_vm, provider)
   snapshot = new_snapshot(create_vm, has_name: !provider.one_of(RHEVMProvider))
   snapshot.create()
   vm_details_view = navigate_to(create_vm, "Details")
-  item = 
+  item = "\"Snapshots\" for Virtual Machine \"#{create_vm.name}\""
   vm_details_view.toolbar.history.item_select(item)
   snapshot_view = create_vm.create_view(InfraVmSnapshotView)
   raise unless snapshot_view.is_displayed

@@ -17,7 +17,7 @@ def ansible_catalog_item(appliance, request, provider, ansible_tower_dialog, cat
   template = config_manager_obj.data["provisioning_data"]["template"]
   cat_list = []
   for _ in 2.times
-    catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ANSIBLE_TOWER, name: ansible_tower_dialog.label, description: fauxfactory.gen_alphanumeric(), display_in: true, catalog: catalog, dialog: ansible_tower_dialog, provider: , config_template: template)
+    catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ANSIBLE_TOWER, name: ansible_tower_dialog.label, description: fauxfactory.gen_alphanumeric(), display_in: true, catalog: catalog, dialog: ansible_tower_dialog, provider: "#{provider_name} Automation Manager", config_template: template)
     cat_list.push(catalog_item.name)
     request.addfinalizer(catalog_item.delete_if_exists)
   end
@@ -26,9 +26,9 @@ end
 def set_roottenant_quota(request, appliance)
   roottenant = appliance.collections.tenants.get_root_tenant()
   field,value = request.param
-  roottenant.set_quota(None: { => true, "field" => value})
+  roottenant.set_quota(None: {"#{field}_cb" => true, "field" => value})
   yield
-  roottenant.set_quota(None: { => false})
+  roottenant.set_quota(None: {"#{field}_cb" => false})
 end
 def test_quota_for_ansible_service(request, appliance, ansible_catalog_item, catalog, ansible_tower_dialog, set_roottenant_quota)
   # 
@@ -65,7 +65,7 @@ def test_quota_for_ansible_service(request, appliance, ansible_catalog_item, cat
       provision_request.remove_request()
     end
     provision_request.wait_for_request()
-    msg = 
+    msg = "Provisioning failed with the message #{provision_request.rest.message}"
     raise msg unless provision_request.is_succeeded()
   }
 end

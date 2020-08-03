@@ -56,7 +56,7 @@ def prov_data(provider, vm_name, template_name)
 end
 def domain(appliance)
   domain = appliance.collections.domains.create(fauxfactory.gen_alphanumeric(15, start: "domain_"), fauxfactory.gen_alphanumeric(15, start: "domain_desc_"), enabled: true)
-  yield domain
+  yield(domain)
   if is_bool(domain.exists)
     domain.delete()
   end
@@ -64,7 +64,7 @@ end
 def catalog_item(appliance, provider, dialog, catalog, prov_data)
   collection = appliance.collections.catalog_items
   catalog_item = collection.create(provider.catalog_item_type, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: "test catalog", display_in: true, catalog: catalog, dialog: dialog, prov_data: prov_data)
-  yield catalog_item
+  yield(catalog_item)
   if is_bool(catalog_item.exists)
     catalog_item.delete()
   end
@@ -72,7 +72,7 @@ end
 def catalog_bundle(appliance, dialog, catalog, catalog_item)
   collection = appliance.collections.catalog_bundles
   catalog_bundle = collection.create(name: fauxfactory.gen_alphanumeric(15, start: "cat_bundle_"), catalog_items: [catalog_item.name], description: "test catalog bundle", display_in: true, catalog: catalog, dialog: dialog)
-  yield catalog_bundle
+  yield(catalog_bundle)
   if is_bool(catalog_bundle.exists)
     catalog_bundle.delete()
   end
@@ -150,7 +150,7 @@ def small_vm(provider, small_template_modscope)
   vm = provider.appliance.collections.infra_vms.instantiate(random_vm_name(context: "reconfig"), provider, small_template_modscope.name)
   vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   vm.refresh_relationships()
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def custom_prov_data(request, prov_data, vm_name, template_name)

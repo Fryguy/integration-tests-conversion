@@ -71,8 +71,8 @@ def vm_ownership(enable_candu, provider, appliance)
   begin
     user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(25, start: provider.name), credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: "secret"), email: "abc@example.com", groups: cb_group, cost_center: "Workload", value_assign: "Database")
     vm.set_ownership(user: user)
-    logger.info()
-    yield user.name
+    logger.info("Assigned VM OWNERSHIP for #{vm_name} running on #{provider.name}")
+    yield(user.name)
   ensure
     vm.unset_ownership()
     if is_bool(user)
@@ -149,7 +149,7 @@ def resource_usage(vm_ownership, appliance, provider)
     ems = appliance.db.client["ext_management_systems"]
     metrics = appliance.db.client["metrics"]
     result = appliance.ssh_client.run_rails_command("\"vm = Vm.where(:ems_id => {}).where(:name => {})[0];            vm.perf_capture(\'realtime\', 1.hour.ago.utc, Time.now.utc)\"".format(provider.id, repr(vm_name)))
-    raise  unless result.success
+    raise "Failed to capture VM C&U data:" unless result.success
     appliance.db.client.transaction {
       result = ems, metrics.parent_ems_id == ems.id.appliance.db.client.session.query(metrics.id).join.filter(metrics.capture_interval_name == "realtime", metrics.resource_name == vm_name, ems.name == provider.name, metrics.timestamp >= date.today())
     }
@@ -163,7 +163,7 @@ def resource_usage(vm_ownership, appliance, provider)
   wait_for(method(:verify_records_metrics_table), [appliance, provider], timeout: 600, fail_condition: false, message: "Waiting for VM real-time data")
   appliance.server.settings.disable_server_roles("ems_metrics_coordinator", "ems_metrics_collector")
   result = appliance.ssh_client.run_rails_command("\"vm = Vm.where(:ems_id => {}).where(:name => {})[0];        vm.perf_rollup_range(1.hour.ago.utc, Time.now.utc,\'realtime\')\"".format(provider.id, repr(vm_name)))
-  raise  unless result.success
+  raise "Failed to rollup VM C&U data:" unless result.success
   wait_for(method(:verify_records_rollups_table), [appliance, provider], timeout: 600, fail_condition: false, message: "Waiting for hourly rollups")
   appliance.db.client.transaction {
     result = ems, rollups.parent_ems_id == ems.id.appliance.db.client.session.query(rollups.id).join.filter(rollups.capture_interval_name == "hourly", rollups.resource_name == vm_name, ems.name == provider.name, rollups.timestamp >= date.today())
@@ -183,7 +183,7 @@ def resource_usage(vm_ownership, appliance, provider)
     end
   end
   average_storage_used = average_storage_used * (math.pow(2, -30))
-  yield {}
+  yield({})
   appliance.server.settings.enable_server_roles("ems_metrics_coordinator", "ems_metrics_collector")
 end
 def resource_cost(appliance, provider, metric_description, usage, description, rate_type, consumed_hours)
@@ -241,9 +241,9 @@ def chargeback_report_default(appliance, vm_ownership, assign_default_rate, prov
   owner = vm_ownership
   data = {"menu_name" => "cb_" + provider.name, "title" => "cb_" + provider.name, "base_report_on" => "Chargeback for Vms", "report_fields" => ["Memory Used", "Memory Used Cost", "Owner", "CPU Used", "CPU Used Cost", "Disk I/O Used", "Disk I/O Used Cost", "Network I/O Used", "Network I/O Used Cost", "Storage Used", "Storage Used Cost"], "filter" => {"filter_show_costs" => "Owner", "filter_owner" => owner, "interval_end" => "Today (partial)"}}
   report = appliance.collections.reports.create(is_candu: true, None: data)
-  logger.info()
+  logger.info("Queuing chargeback report with default rate for #{provider.name} provider")
   report.queue(wait_for_finish: true)
-  yield report.saved_reports.all()[0].data.rows.to_a
+  yield(report.saved_reports.all()[0].data.rows.to_a)
   if is_bool(report.exists)
     report.delete()
   end
@@ -252,9 +252,9 @@ def chargeback_report_custom(appliance, vm_ownership, assign_custom_rate, provid
   owner = vm_ownership
   data = {"menu_name" => "cb_custom_" + provider.name, "title" => "cb_custom" + provider.name, "base_report_on" => "Chargeback for Vms", "report_fields" => ["Memory Used", "Memory Used Cost", "Owner", "CPU Used", "CPU Used Cost", "Disk I/O Used", "Disk I/O Used Cost", "Network I/O Used", "Network I/O Used Cost", "Storage Used", "Storage Used Cost"], "filter" => {"filter_show_costs" => "Owner", "filter_owner" => owner, "interval_end" => "Today (partial)"}}
   report = appliance.collections.reports.create(is_candu: true, None: data)
-  logger.info()
+  logger.info("Queuing chargeback report with custom rate for #{provider.name} provider")
   report.queue(wait_for_finish: true)
-  yield report.saved_reports.all()[0].data.rows.to_a
+  yield(report.saved_reports.all()[0].data.rows.to_a)
   if is_bool(report.exists)
     report.delete()
   end
@@ -267,7 +267,7 @@ def new_compute_rate(appliance)
   rescue Exception => ex
     pytest.fail(("Exception while creating compute/storage rates for chargeback report tests. {}").format(ex))
   end
-  yield desc
+  yield(desc)
   for entity in [compute, storage]
     begin
       entity.delete_if_exists()

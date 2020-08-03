@@ -17,7 +17,7 @@ require_relative 'cfme/utils/version'
 include Cfme::Utils::Version
 pytestmark = [test_requirements.db_migration, pytest.mark.uncollectif(lambda{|appliance| appliance.is_dev}, reason: "DB migrate tests not valid for dev server")]
 def pytest_generate_tests(metafunc)
-  if .include?(metafunc.function)
+  if Set.new([test_upgrade_single_inplace, test_db_migrate_replication, test_upgrade_single_sidebyside]).include?(metafunc.function)
     return
   end
   argnames,argvalues,idlist = [["db_url", "db_version", "db_desc"], [], []]
@@ -51,7 +51,7 @@ def appliance_preupdate(temp_appliance_preconfig_funcscope_upgrade, appliance)
   update_url = "update_url_{}".format(series.gsub(".", ""))
   temp_appliance_preconfig_funcscope_upgrade.db.extend_partition()
   urls = cfme_data["basic_info"][update_url]
-  temp_appliance_preconfig_funcscope_upgrade.ssh_client.run_command()
+  temp_appliance_preconfig_funcscope_upgrade.ssh_client.run_command("curl #{urls} -o /etc/yum.repos.d/update.repo")
   return temp_appliance_preconfig_funcscope_upgrade
 end
 def guess_the_db_format(basename)
@@ -67,30 +67,31 @@ def guess_the_db_format(basename)
 end
 def download_and_migrate_db(app, db_url)
   fetch = lambda do |src, dst|
-    result = app.ssh_client.run_command(, timeout: 15)
-    raise  unless result.success
+    result = app.ssh_client.run_command("curl  --fail -S -o \"#{dst}\" \"#{src}\"", timeout: 15)
+    raise "Failed to download #{src}:
+#{result.output}" unless result.success
   end
-  logger.info()
+  logger.info("Downloading database: #{db_url}")
   url_basename = os_path.basename(db_url)
   loc = "/tmp/"
   v2key_url = os_path.dirname(db_url), "v2_key.bak".os_path.join
   database_yml_url = os_path.dirname(db_url), "database.yml".os_path.join
   db_format = guess_the_db_format(url_basename)
-  fetch.call(db_url, )
+  fetch.call(db_url, "#{loc}#{url_basename}")
   app.evmserverd.stop()
   app.__dict__.pop("rest_api", nil)
   app.db.drop()
   app.db.create()
   if db_format == "pg_dump"
-    result = app.ssh_client.run_command(, timeout: 600)
+    result = app.ssh_client.run_command("pg_restore -v --dbname=vmdb_production #{loc}#{url_basename}", timeout: 600)
   else
     if db_format == "pg_dumpall"
-      result = app.ssh_client.run_command(, timeout: 600)
+      result = app.ssh_client.run_command("psql postgres < #{loc}#{url_basename}", timeout: 600)
     else
-      raise Exception, 
+      raise Exception, "Unknown db format: #{db_format}"
     end
   end
-  raise  unless result.success
+  raise "Failed to restore new database: #{result.output}" unless result.success
   begin
     fetch.call(v2key_url, "/var/www/miq/vmdb/certs/v2_key")
     v2_key_available = true
@@ -119,7 +120,7 @@ def download_and_migrate_db(app, db_url)
     app.evmserverd.start()
   rescue ApplianceException
     result = app.ssh_client.run_rake_command("evm:start")
-    raise  unless result.success
+    raise "Couldn't start evmserverd: #{result.output}" unless result.success
   end
   app.wait_for_web_ui(timeout: 600)
   app.db.reset_user_pass()
@@ -147,24 +148,24 @@ def test_db_migrate_replication(temp_appliance_remote, dbversion, temp_appliance
   #   
   app = temp_appliance_remote
   app2 = temp_appliance_global_region
-  logger.info()
+  logger.info("Downloading database: #{dbversion}")
   db_url = cfme_data["db_backups"][dbversion]["url"]
   url_basename = os_path.basename(db_url)
-  result = app.ssh_client.run_command(, timeout: 30)
-  raise  unless result.success
+  result = app.ssh_client.run_command("curl -o \"/tmp/#{url_basename}\" \"#{db_url}\"", timeout: 30)
+  raise "Failed to download database: #{result.output}" unless result.success
   v2key_url = os_path.dirname(db_url), "v2_key".os_path.join
   app.evmserverd.stop()
   app.db.drop()
   app.db.create()
-  result = app.ssh_client.run_command(, timeout: 600)
-  raise  unless result.success
+  result = app.ssh_client.run_command("pg_restore -v --dbname=vmdb_production /tmp/#{url_basename}", timeout: 600)
+  raise "Failed to restore new database: #{result.output}" unless result.success
   app.db.migrate()
   begin
-    result = app.ssh_client.run_command(, timeout: 15)
-    raise  unless result.success
-    raise  unless result.output.include?(":key:")
-    result = app.ssh_client.run_command(, timeout: 15)
-    raise  unless result.success
+    result = app.ssh_client.run_command("curl \"#{v2key_url}\"", timeout: 15)
+    raise "Failed to download v2_key: #{result.output}" unless result.success
+    raise "Not a v2_key file: #{result.output}" unless result.output.include?(":key:")
+    result = app.ssh_client.run_command("curl -o \"/var/www/miq/vmdb/certs/v2_key\" \"#{v2key_url}\"", timeout: 15)
+    raise "Failed to download v2_key: #{result.output}" unless result.success
   rescue RuntimeError
     app.db.fix_auth_key()
   end
@@ -173,7 +174,7 @@ def test_db_migrate_replication(temp_appliance_remote, dbversion, temp_appliance
     app.evmserverd.start()
   rescue ApplianceException
     result = app.ssh_client.run_rake_command("evm:start")
-    raise  unless result.success
+    raise "Couldn't start evmserverd: #{result.output}" unless result.success
   end
   app.wait_for_web_ui(timeout: 600)
   app.db.reset_user_pass()
@@ -198,7 +199,7 @@ def test_upgrade_single_inplace(appliance_preupdate, appliance)
   #   
   appliance_preupdate.evmserverd.stop()
   result = appliance_preupdate.ssh_client.run_command("yum update -y", timeout: 3600)
-  raise  unless result.success
+  raise "update failed #{result.output}" unless result.success
   appliance_preupdate.db.migrate()
   appliance_preupdate.db.automate_reset()
   appliance_preupdate.db_service.restart()

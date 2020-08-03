@@ -110,7 +110,7 @@ def edit_requests(collection, rest_api, requests_pending, from_detail)
   else
     identifiers = []
     for (i, resource) in enumerate(requests_pending)
-      loc = [{"id" => resource.id}, {"href" => }]
+      loc = [{"id" => resource.id}, {"href" => "#{collection._href}/#{resource.id}"}]
       identifiers.push(loc[i % 2])
     end
     collection.action.edit(*identifiers, None: body)

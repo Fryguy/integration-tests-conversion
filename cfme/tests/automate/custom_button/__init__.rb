@@ -28,7 +28,7 @@ def check_log_requests_count(appliance, parse_str: nil)
   if is_bool(!parse_str)
     parse_str = "Attributes - Begin"
   end
-  count = appliance.ssh_client.run_command()
+  count = appliance.ssh_client.run_command("grep -c -w '#{parse_str}' /var/www/miq/vmdb/log/automation.log")
   return count.output.to_i
 end
 def log_request_check(appliance, expected_count)

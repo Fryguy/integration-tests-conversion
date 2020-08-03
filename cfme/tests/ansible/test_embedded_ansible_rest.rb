@@ -15,13 +15,13 @@ end
 def repository(appliance, ansible)
   collection = appliance.rest_api.collections.configuration_script_sources
   uniq = fauxfactory.gen_alphanumeric(5)
-  repo_name = 
-  data = {"name" => repo_name, "description" => , "manager_resource" => {"href" => ansible.href}, "related" => {}, "scm_type" => "git", "scm_url" => "https://github.com/quarckster/ansible_playbooks", "scm_branch" => "", "scm_clean" => false, "scm_delete_on_update" => false, "scm_update_on_launch" => false}
+  repo_name = "test_repo_#{uniq}"
+  data = {"name" => repo_name, "description" => "Test Repo #{uniq}", "manager_resource" => {"href" => ansible.href}, "related" => {}, "scm_type" => "git", "scm_url" => "https://github.com/quarckster/ansible_playbooks", "scm_branch" => "", "scm_clean" => false, "scm_delete_on_update" => false, "scm_update_on_launch" => false}
   collection.action.create(data)
   assert_response(appliance)
   repo_rest,__ = wait_for(lambda{|| collection.find_by(name: repo_name) || false}, num_sec: 300, delay: 5)
   repo_rest = repo_rest[0]
-  yield repo_rest
+  yield(repo_rest)
   if is_bool(repo_rest.exists)
     repo_rest.action.delete()
   end

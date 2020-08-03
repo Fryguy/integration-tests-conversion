@@ -41,19 +41,19 @@ def service_dialog(appliance, widget_name)
   tab = sd.tabs.create(tab_label: fauxfactory.gen_alphanumeric(start: "tab_"), tab_desc: "my tab desc")
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   box.elements.create(element_data: [element_data])
-  yield [sd, element_data]
+  yield([sd, element_data])
   sd.delete_if_exists()
 end
 def catalog_item_local(appliance, service_dialog, catalog)
   sd,element_data = service_dialog
   item_name = fauxfactory.gen_alphanumeric(15, start: "cat_item_")
   catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: item_name, description: "my catalog", display_in: true, catalog: catalog, dialog: sd)
-  yield catalog_item
+  yield(catalog_item)
   catalog_item.delete_if_exists()
 end
 def custom_categories(appliance)
   category = appliance.collections.categories.create(name: "tier_no_production", description: "testing dialog", display_name: "tier_no_production")
-  yield category
+  yield(category)
   category.delete_if_exists()
 end
 def test_required_dialog_elements(appliance, catalog_item_local, service_dialog, widget_name)
@@ -273,7 +273,7 @@ def test_clicking_created_catalog_item_in_the_list(appliance, generic_catalog_it
         break
       end
     end
-    raise unless view.title.text == 
+    raise unless view.title.text == "Service Catalog Item \"#{generic_catalog_item.name}\""
   }
 end
 def test_provider_field_should_display_in_vm_details_page_in_ssui(appliance, provider, setup_provider, service_vm)
@@ -811,7 +811,7 @@ def test_save_dynamic_multi_drop_down_dialog(appliance, import_datastore, import
   view.ele_save_button.click()
   view.save_button.click()
   view = sd.create_view(DetailsDialogView, wait: "60s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("#{sd.label} was saved")
 end
 def test_dialog_not_required_default_value(appliance, generic_catalog_item_with_imported_dialog, file_name)
   # 

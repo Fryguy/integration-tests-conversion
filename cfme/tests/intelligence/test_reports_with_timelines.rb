@@ -31,7 +31,7 @@ def setup_for_reports(request, appliance, provider, path, updates, vm_crud, regi
   report = appliance.collections.reports.instantiate(type: path[0], subtype: path[1], menu_name: path[2], title: path[3])
   copied_report = report.copy()
   copied_report.update(updates)
-  yield copied_report
+  yield(copied_report)
   copied_report.delete()
 end
 def vm_crud(provider, small_template)
@@ -39,7 +39,7 @@ def vm_crud(provider, small_template)
   vm_name = fauxfactory.gen_alpha(length: 18, start: "test_events_").downcase()
   collection = provider.appliance.provider_based_collection(provider)
   vm = collection.instantiate(vm_name, provider, template_name: template.name)
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def generate_policy_event(request, appliance, provider, vm_crud, register_event)

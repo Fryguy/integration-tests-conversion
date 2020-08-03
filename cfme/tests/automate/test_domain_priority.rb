@@ -81,14 +81,14 @@ def test_priority(request, appliance, original_method, original_instance, origin
   #           14.The contents of the file should be the same as in the first case.
   #   
   ssh_client = appliance.ssh_client
-  ssh_client.run_command()
+  ssh_client.run_command("rm -f #{FILE_LOCATION}")
   domain_collection.set_order([original_domain])
   simulate(appliance: appliance, instance: "Request", message: "create", request: original_instance.name, execute_methods: true)
-  wait_for(lambda{|| ssh_client.run_command().success}, num_sec: 120, delay: 0.5, message: "wait for file to appear")
-  request.addfinalizer(lambda{|| ssh_client.run_command()})
-  result = ssh_client.run_command()
+  wait_for(lambda{|| ssh_client.run_command("cat #{FILE_LOCATION}").success}, num_sec: 120, delay: 0.5, message: "wait for file to appear")
+  request.addfinalizer(lambda{|| ssh_client.run_command("rm -f #{FILE_LOCATION}")})
+  result = ssh_client.run_command("cat #{FILE_LOCATION}")
   raise unless result.output.strip() == original_method_write_data
-  ssh_client.run_command()
+  ssh_client.run_command("rm -f #{FILE_LOCATION}")
   original_method.copy_to(copy_domain)
   copied_method = copy_domain.namespaces.instantiate(name: "System").classes.instantiate(name: "Request").methods.instantiate(name: original_method.name)
   update(copied_method) {
@@ -96,16 +96,16 @@ def test_priority(request, appliance, original_method, original_instance, origin
   }
   domain_collection.set_order([copy_domain])
   simulate(appliance: appliance, instance: "Request", message: "create", request: original_instance.name, execute_methods: true)
-  wait_for(lambda{|| ssh_client.run_command().success}, num_sec: 120, delay: 0.5, message: "wait for file to appear")
-  result = ssh_client.run_command()
+  wait_for(lambda{|| ssh_client.run_command("cat #{FILE_LOCATION}").success}, num_sec: 120, delay: 0.5, message: "wait for file to appear")
+  result = ssh_client.run_command("cat #{FILE_LOCATION}")
   raise unless result.output.strip() == copy_method_write_data
-  ssh_client.run_command()
+  ssh_client.run_command("rm -f #{FILE_LOCATION}")
   domain_collection.set_order([original_domain])
   simulate(appliance: appliance, instance: "Request", message: "create", request: original_instance.name, execute_methods: true)
-  wait_for(lambda{|| ssh_client.run_command().success}, num_sec: 120, delay: 0.5, message: "wait for file to appear")
-  result = ssh_client.run_command()
+  wait_for(lambda{|| ssh_client.run_command("cat #{FILE_LOCATION}").success}, num_sec: 120, delay: 0.5, message: "wait for file to appear")
+  result = ssh_client.run_command("cat #{FILE_LOCATION}")
   raise unless result.output.strip() == original_method_write_data
-  ssh_client.run_command()
+  ssh_client.run_command("rm -f #{FILE_LOCATION}")
 end
 def test_automate_disabled_domains_in_domain_priority(request, klass)
   # When the admin clicks on a instance that has duplicate entries in two different

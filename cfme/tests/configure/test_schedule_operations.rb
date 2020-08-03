@@ -23,7 +23,7 @@ def host_with_credentials(appliance, provider)
   host = provider.hosts.all()[0]
   host_data, = provider.data["hosts"].select{|data| data["name"] == host.name}.map{|data| data}
   host.update_credentials_rest(credentials: host_data["credentials"])
-  yield host
+  yield(host)
   host.remove_credentials_rest()
 end
 def current_server_time(appliance)
@@ -49,21 +49,21 @@ def test_schedule_crud(appliance, current_server_time)
   start_date = current_time + relativedelta.relativedelta(days: 2)
   schedule = appliance.collections.system_schedules.create(name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), start_date: start_date)
   view = appliance.browser.create_view(BaseLoggedInPage)
-  view.flash.assert_message()
+  view.flash.assert_message("Schedule \"#{schedule.name}\" was saved")
   start_date_updated = start_date - relativedelta.relativedelta(days: 1)
   updates = {"name" => fauxfactory.gen_alphanumeric(), "description" => fauxfactory.gen_alphanumeric()}
   schedule.update(updates, cancel: true)
-  view.flash.assert_message()
+  view.flash.assert_message("Edit of Schedule \"#{schedule.name}\" was cancelled by the user")
   schedule.update(updates, reset: true)
   view.flash.assert_message("All changes have been reset")
   update(schedule) {
     schedule.name = fauxfactory.gen_alphanumeric()
     schedule.start_date = start_date_updated
   }
-  view.flash.assert_message()
+  view.flash.assert_message("Schedule \"#{schedule.name}\" was saved")
   schedule.delete(cancel: true)
   schedule.delete()
-  view.flash.assert_message()
+  view.flash.assert_message("Schedule \"#{schedule.description}\": Delete successful")
 end
 def test_schedule_analysis_in_the_past(appliance, current_server_time, request)
   # 
@@ -99,7 +99,7 @@ def test_create_multiple_schedules_in_one_timezone(appliance, request)
   for i in 6.times
     schedule = appliance.collections.system_schedules.create(name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), time_zone: "(GMT-04:00) Atlantic Time (Canada)")
     view = appliance.browser.create_view(BaseLoggedInPage)
-    view.flash.assert_message()
+    view.flash.assert_message("Schedule \"#{schedule.name}\" was saved")
     schedule_list.push(schedule)
   end
 end

@@ -215,7 +215,7 @@ def services_vms_list(appliance, request, provider, catalog_item)
   for num in 1.upto(3-1)
     rest_service = _services(request, appliance, provider: provider, service_template: service_template)[0]
     ui_services.push(MyService(appliance, name: rest_service.name, description: rest_service.description))
-    vms.push(appliance.rest_api.collections.vms.get(name: ))
+    vms.push(appliance.rest_api.collections.vms.get(name: "#{catalog_item.prov_data["catalog"]["vm_name"]}000#{num}"))
   end
   return [ui_services, vms]
 end
@@ -348,13 +348,13 @@ def test_retire_service_bundle_and_vms(appliance, provider, catalog_item, reques
   #   
   collection = provider.appliance.provider_based_collection(provider)
   vm_name = "{}0001".format(catalog_item.prov_data["catalog"]["vm_name"])
-  vm = collection.instantiate(, provider)
+  vm = collection.instantiate("#{vm_name}", provider)
   bundle_name = fauxfactory.gen_alphanumeric(12, start: "bundle_")
   catalog_bundle = appliance.collections.catalog_bundles.create(bundle_name, description: "catalog_bundle", display_in: true, catalog: catalog_item.catalog, dialog: catalog_item.dialog, catalog_items: [catalog_item.name])
   request.addfinalizer(catalog_bundle.delete_if_exists)
   service_catalogs = ServiceCatalogs(appliance, catalog_bundle.catalog, catalog_bundle.name)
   service_catalogs.order()
-  request_description = 
+  request_description = "Provisioning Service [#{catalog_bundle.name}] from [#{catalog_bundle.name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
   provision_request.is_succeeded(method: "ui")

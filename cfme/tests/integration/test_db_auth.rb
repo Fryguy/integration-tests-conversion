@@ -9,13 +9,13 @@ include Cfme::Utils::Blockers
 require_relative 'cfme/utils/update'
 include Cfme::Utils::Update
 pytestmark = [test_requirements.auth]
-TEST_PASSWORDS = [, , , , "", fauxfactory.gen_alpha().upcase(), "$%&'()*+,-./:;<=>?@[\\]^_{|}~"]
+TEST_PASSWORDS = ["#{fauxfactory.gen_alpha()} ", " #{fauxfactory.gen_alpha()}", "$#!#{fauxfactory.gen_alpha()}", "#{fauxfactory.gen_alpha(17)}", "", fauxfactory.gen_alpha().upcase(), "$%&'()*+,-./:;<=>?@[\\]^_{|}~"]
 def user(appliance)
   name = fauxfactory.gen_alpha(15, start: "test-user-")
   creds = Credential(principal: name, secret: fauxfactory.gen_alpha())
   user_group = appliance.collections.groups.instantiate(description: "EvmGroup-vm_user")
   user = appliance.collections.users.create(name: name, credential: creds, groups: user_group)
-  yield user
+  yield(user)
   user.delete_if_exists()
 end
 def nonexistent_user(appliance)
@@ -23,7 +23,7 @@ def nonexistent_user(appliance)
   creds = Credential(principal: name, secret: fauxfactory.gen_alpha())
   user_group = appliance.collections.groups.instantiate(description: "EvmGroup-vm_user")
   user = appliance.collections.users.instantiate(name: name, credential: creds, groups: user_group)
-  yield user
+  yield(user)
 end
 def test_db_user_pwd(appliance, user, pwd, soft_assert)
   # 

@@ -33,7 +33,7 @@ def button_with_dialog(appliance, generic_object, dialog)
   generic_definition = generic_object.definition
   appliance.context.use(ViaUI) {
     button = generic_definition.collections.generic_object_buttons.create(name: fauxfactory.gen_alpha(start: "btn_"), description: fauxfactory.gen_alpha(15, start: "btn_desc_"), request: "call_instance", image: "ff ff-network-interface", dialog: dialog.label)
-    yield button
+    yield(button)
     button.delete_if_exists()
   }
 end
@@ -74,7 +74,7 @@ def test_generic_objects_crud(appliance, context, request)
       instance.associations = {"services" => myservices}
     }
     rest_instance = appliance.rest_api.collections.generic_objects.get(name: instance.name)
-    rest_data = appliance.rest_api.get()
+    rest_data = appliance.rest_api.get("#{rest_instance.href}?associations=services")
     raise unless rest_data["services"].size == 2
     raise unless rest_data["property_attributes"]["addr01"] == "Changed"
     instance.delete()

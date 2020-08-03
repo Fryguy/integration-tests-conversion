@@ -16,13 +16,13 @@ def metrics_up_and_running(provider)
     router = (provider.mgmt.list_route().select{|router| (router.metadata.name == "hawkular-metrics") || router.metadata.name == "prometheus"}.map{|router| router}).pop()
     metrics_url = router.status.ingress[0].host
   rescue NoMethodError
-    pytest.skip()
+    pytest.skip("Could not determine metric route for #{provider.key}")
   end
   creds = provider.get_credentials_from_config(provider.key, cred_type: "token")
-  header = {"Authorization" => }
-  response = requests.get(, headers: header, verify: false)
-  raise  unless response.ok
-  logger.info()
+  header = {"Authorization" => "Bearer #{creds.token}"}
+  response = requests.get("https://#{metrics_url}:443", headers: header, verify: false)
+  raise "#{router.metadata.name} failed to start!" unless response.ok
+  logger.info("#{router.metadata.name} started successfully")
 end
 def is_ad_hoc_greyed(provider_object)
   view = navigate_to(provider_object, "Details")
@@ -51,5 +51,5 @@ def test_ad_hoc_metrics_select_filter(provider, metrics_up_and_running)
   view.set_filter(view.get_random_filter())
   view.apply_filter()
   view.wait_for_results_to_load()
-  raise  unless view.get_total_results_count() != 0
+  raise "No results found for #{view.selected_filter}" unless view.get_total_results_count() != 0
 end

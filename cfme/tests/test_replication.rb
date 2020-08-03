@@ -26,14 +26,16 @@ def create_vm(provider, vm_name)
   begin
     template_name = provider.data["templates"]["full_template"]["name"]
   rescue KeyError
-    pytest.skip()
+    pytest.skip("Unable to identify full_template for provider: #{provider}")
   end
   vm = collection.instantiate(vm_name, provider, template_name: template_name)
   vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   return vm
 end
 def are_dicts_same(dict1, dict2)
-  logger.info()
+  logger.info("Comparing two dictionaries
+ dict1:#{dict1}
+ dict2:#{dict2}")
   if Set.new(dict1) != Set.new(dict2)
     return false
   end
@@ -240,7 +242,7 @@ def test_replication_appliance_add_multi_subscription(request, setup_multi_regio
   region = multi_region_cluster.global_appliance.collections.regions.instantiate()
   navigate_to(region.replication, "Global")
   for host in multi_region_cluster.remote_appliances
-    raise  unless region.replication.get_replication_status(host: host.hostname)
+    raise "#{host.hostname} Remote Appliance is not found in Global Appliance's list" unless region.replication.get_replication_status(host: host.hostname)
   end
 end
 def test_replication_global_region_dashboard(request, setup_replication)
@@ -279,13 +281,13 @@ def test_replication_global_region_dashboard(request, setup_replication)
   view = navigate_to(remote_app.server, "Dashboard")
   for table_name in data_items
     logger.info("Table name:{%s}" % table_name)
-    Wait_for::wait_for(method(:data_check), func_args: [view, table_name], delay: 20, num_sec: 600, fail_func: view.dashboards("Default Dashboard").browser.refresh, message: )
+    Wait_for::wait_for(method(:data_check), func_args: [view, table_name], delay: 20, num_sec: 600, fail_func: view.dashboards("Default Dashboard").browser.refresh, message: "Waiting for table data item: #{table_name} ")
     remote_app_data[table_name] = get_tabel_data.call(view.dashboards("Default Dashboard").widgets(table_name))
   end
   view = navigate_to(global_app.server, "Dashboard")
   for table_name in data_items
     logger.info("Table name:{%s}" % table_name)
-    Wait_for::wait_for(method(:data_check), func_args: [view, table_name], delay: 20, num_sec: 600, fail_func: view.dashboards("Default Dashboard").browser.refresh, message: )
+    Wait_for::wait_for(method(:data_check), func_args: [view, table_name], delay: 20, num_sec: 600, fail_func: view.dashboards("Default Dashboard").browser.refresh, message: "Waiting for table data item: #{table_name}")
     global_app_data[table_name] = get_tabel_data.call(view.dashboards("Default Dashboard").widgets(table_name))
   end
   raise "Dashboard is not same of both app." unless are_dicts_same(remote_app_data, global_app_data)
@@ -317,7 +319,7 @@ def test_replication_global_to_remote_new_vm_from_template(request, setup_replic
   vm = create_vm(provider: global_provider, vm_name: new_vm_name)
   request.addfinalizer(vm.cleanup_on_provider)
   remote_provider.refresh_provider_relationships()
-  raise  unless remote_app.collections.infra_vms.instantiate(new_vm_name, remote_provider).exists
+  raise "#{new_vm_name} vm is not found in Remote Appliance" unless remote_app.collections.infra_vms.instantiate(new_vm_name, remote_provider).exists
 end
 def test_replication_subscription_revalidation_pglogical(configured_appliance, unconfigured_appliance)
   # 

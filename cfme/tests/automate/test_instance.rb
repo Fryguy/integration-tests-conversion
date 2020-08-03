@@ -77,14 +77,14 @@ def test_automate_instance_missing(domain, klass, namespace, appliance)
   #       tags: automate
   #   
   catch_string = fauxfactory.gen_alphanumeric()
-  method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), location: "inline", script: )
+  method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), location: "inline", script: "$evm.log(:info, \"#{catch_string}\")")
   klass.schema.add_fields({"name" => "mfield", "type" => "Method", "data_type" => "String"})
   klass.instances.create(name: ".missing", fields: {"mfield" => {"value" => "${#_missing_instance}"}})
   klass2 = namespace.classes.create(name: fauxfactory.gen_alpha())
   klass2.schema.add_fields({"name" => "rel", "type" => "Relationship"})
   instance2 = klass2.instances.create(name: fauxfactory.gen_alphanumeric(), fields: {"rel" => {"value" => ("/") + (method.tree_path_name_only[1..-1].join("/"))}})
-  simulate(appliance: appliance, request: "Call_Instance", attributes_values: {"namespace" => , "class" => klass2.name, "instance" => instance2.name})
-  raise unless appliance.ssh_client.run_command().success
+  simulate(appliance: appliance, request: "Call_Instance", attributes_values: {"namespace" => "#{domain.name}/#{namespace.name}", "class" => klass2.name, "instance" => instance2.name})
+  raise unless (appliance.ssh_client.run_command("grep #{catch_string} /var/www/miq/vmdb/log/automation.log")).success
 end
 def test_automate_relationship_trailing_spaces(request, klass, namespace, domain)
   # 
@@ -114,7 +114,7 @@ def test_automate_relationship_trailing_spaces(request, klass, namespace, domain
   #       https://github.com/ManageIQ/manageiq/pull/7550
   #   
   catch_string = fauxfactory.gen_alphanumeric()
-  method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), location: "inline", script: )
+  method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), location: "inline", script: "$evm.log(:info, \"#{catch_string}\")")
   request.addfinalizer(method.delete_if_exists)
   klass.schema.add_fields({"name" => "meth", "type" => "Method", "data_type" => "String"})
   instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"meth" => {"value" => method.name}})
@@ -124,9 +124,9 @@ def test_automate_relationship_trailing_spaces(request, klass, namespace, domain
   klass2.schema.add_fields({"name" => "rel", "type" => "Relationship", "data_type" => "String"})
   instance2 = klass2.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"rel" => {"value" => ("/{domain}/{namespace}/{klass}/{instance}   ").format(domain: domain.name, namespace: namespace.name, klass: klass.name, instance: instance.name)}})
   request.addfinalizer(instance2.delete_if_exists)
-  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [], failure_patterns: [".*ERROR.*"])
+  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*#{catch_string}.*"], failure_patterns: [".*ERROR.*"])
   result.start_monitoring()
-  simulate(appliance: klass.appliance, request: "Call_Instance", attributes_values: {"namespace" => , "class" => klass2.name, "instance" => instance2.name})
+  simulate(appliance: klass.appliance, request: "Call_Instance", attributes_values: {"namespace" => "#{domain.name}/#{namespace.name}", "class" => klass2.name, "instance" => instance2.name})
   raise unless result.validate(wait: "60s")
 end
 def copy_instance(domain)
@@ -136,7 +136,7 @@ def copy_instance(domain)
   klass = domain.parent.instantiate(name: "ManageIQ").namespaces.instantiate(name: "System").classes.instantiate(name: "Request")
   klass.instances.instantiate(name: "ansible_tower_job").copy_to(domain.name)
   instance = domain.namespaces.instantiate(name: "System").classes.instantiate(name: "Request").instances.instantiate(name: "ansible_tower_job")
-  yield instance
+  yield(instance)
 end
 def test_check_system_request_calls_depr_conf_mgmt(appliance, copy_instance)
   # 
@@ -163,7 +163,7 @@ def test_check_system_request_calls_depr_conf_mgmt(appliance, copy_instance)
   #       1615444
   #   
   search = "/AutomationManagement/AnsibleTower/Operations/StateMachines/Job/default"
-  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [])
+  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*#{search}.*"])
   result.start_monitoring()
   simulate(appliance: appliance, request: copy_instance.name)
   raise unless result.validate(wait: "60s")
@@ -192,7 +192,7 @@ def test_quota_source_value(request, entity, search, copy_quota_instance, generi
   root_tenant = copy_quota_instance.appliance.collections.tenants.get_root_tenant()
   root_tenant.set_quota(None: {"cpu_cb" => true, "cpu" => 3})
   request.addfinalizer(lambda{|| root_tenant.set_quota(None: {"cpu_cb" => false})})
-  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [])
+  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*#{search}.*"])
   result.start_monitoring()
   service_catalogs = ServiceCatalogs(copy_quota_instance.appliance, catalog: generic_catalog_item.catalog, name: generic_catalog_item.name)
   request_description = "Provisioning Service [{name}] from [{name}]".format(name: service_catalogs.name)
@@ -215,10 +215,10 @@ $evm.log(:info, \"Hello from method of parent instance\")
                 
 exit MIQ_STOP
                 ")
-  instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"state3" => {"value" => }})
+  instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"state3" => {"value" => "METHOD::#{method.name}"}})
   klass2 = namespace.classes.create(name: fauxfactory.gen_alpha(), display_name: fauxfactory.gen_alpha(), description: fauxfactory.gen_alpha())
   klass2.schema.add_fields(*[state1, state2].map{|state| {"name" => state, "type" => "State"}})
-  yield [klass2, instance, state1, state2, state3]
+  yield([klass2, instance, state1, state2, state3])
   method.delete_if_exists()
   instance.delete_if_exists()
   klass2.delete_if_exists()
@@ -260,8 +260,13 @@ def test_miq_stop_abort_with_state_machines(request, setup, process, domain, kla
   #             method A1 - \"Hello from method of parent instance\"
   #   
   klass2,instance,state1,state2,state3 = setup
-  child_method = ["first", "second", "third"].map{|num| klass2.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: )}.to_a
-  fields = [{"state1" => {"value" => }, "state2" => {"value" => }}, {"state1" => {"value" => }}]
+  child_method = ["first", "second", "third"].map{|num| klass2.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: "
+               
+$evm.log(:info, \"This is method #{num}\")
+                
+exit #{process.upcase()}
+                ")}.to_a
+  fields = [{"state1" => {"value" => "METHOD::#{child_method[0].name}"}, "state2" => {"value" => "METHOD::#{child_method[1].name}"}}, {"state1" => {"value" => "METHOD::#{child_method[2].name}"}}]
   child_inst = fields.map{|field| klass2.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: field)}.to_a
   finalize = lambda do
     for method in child_method
@@ -272,7 +277,7 @@ def test_miq_stop_abort_with_state_machines(request, setup, process, domain, kla
     end
   end
   update(instance) {
-    instance.fields = {"state1" => {"value" => }, "state2" => {"value" => }}
+    instance.fields = {"state1" => {"value" => "/#{domain.name}/#{namespace.name}/#{klass2.name}/#{child_inst[0].name}"}, "state2" => {"value" => "/#{domain.name}/#{namespace.name}/#{klass2.name}/#{child_inst[1].name}"}}
   }
   result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Hello from method of parent instance.*"])
   result.start_monitoring()

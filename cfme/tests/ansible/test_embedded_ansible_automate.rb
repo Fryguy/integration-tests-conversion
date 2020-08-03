@@ -35,7 +35,7 @@ include Cfme::Utils::Wait
 pytestmark = [pytest.mark.long_running, pytest.mark.provider([VMwareProvider], selector: ONE_PER_TYPE, scope: "module"), test_requirements.ansible, pytest.mark.tier(3)]
 def ansible_credential(appliance, ansible_repository, full_template_modscope)
   credential = appliance.collections.ansible_credentials.create(fauxfactory.gen_alpha(start: "cred_"), "Machine", username: credentials[full_template_modscope["creds"]]["username"], password: credentials[full_template_modscope["creds"]]["password"])
-  yield credential
+  yield(credential)
   credential.delete_if_exists()
 end
 def management_event_class(appliance, namespace)
@@ -51,17 +51,17 @@ end
 def custom_vm_button(appliance, ansible_catalog_item)
   buttongroup = appliance.collections.button_groups.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: appliance.collections.button_groups.VM_INSTANCE)
   button = buttongroup.buttons.create(type: "Ansible Playbook", text: fauxfactory.gen_alphanumeric(start: "btn_"), hover: fauxfactory.gen_alphanumeric(15, start: "btn_hvr_"), playbook_cat_item: ansible_catalog_item.name)
-  yield button
+  yield(button)
   button.delete_if_exists()
   buttongroup.delete_if_exists()
 end
 def alert(appliance, management_event_instance)
   _alert = appliance.collections.alerts.create(fauxfactory.gen_alpha(30, start: "Trigger by Un-Tag Complete "), active: true, based_on: "VM and Instance", evaluate: "Nothing", driving_event: "Company Tag: Un-Tag Complete", notification_frequency: "1 Minute", mgmt_event: management_event_instance.name)
-  yield _alert
+  yield(_alert)
   _alert.delete_if_exists()
 end
 def alert_profile(appliance, alert, create_vm_modscope)
-  _alert_profile = appliance.collections.alert_profiles.create(alert_profiles.VMInstanceAlertProfile, , alerts: [alert])
+  _alert_profile = appliance.collections.alert_profiles.create(alert_profiles.VMInstanceAlertProfile, "Alert profile for #{create_vm_modscope.name}", alerts: [alert])
   _alert_profile.assign_to("The Enterprise")
   yield
   _alert_profile.delete_if_exists()
@@ -95,7 +95,7 @@ def test_automate_ansible_playbook_method_type(request, appliance, ansible_repos
   klass.schema.add_field(name: "execute", type: "Method", data_type: "String")
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(start: "meth_"), location: "playbook", repository: ansible_repository.name, playbook: "copy_file_example.yml", machine_credential: "CFME Default Credential", playbook_input_parameters: [["key", "value", "string"]])
   instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(start: "inst_"), description: fauxfactory.gen_alphanumeric(), fields: {"execute" => {"value" => method.name}})
-  simulate(appliance: appliance, request: "Call_Instance", attributes_values: {"namespace" => , "class" => klass.name, "instance" => instance.name})
+  simulate(appliance: appliance, request: "Call_Instance", attributes_values: {"namespace" => "#{domain.name}/#{namespace.name}", "class" => klass.name, "instance" => instance.name})
   request.addfinalizer(lambda{|| appliance.ssh_client.run_command("[[ -f \"/var/tmp/modified-release\" ]] && rm -f \"/var/tmp/modified-release\"")})
   raise unless (appliance.ssh_client.run_command("[ -f \"/var/tmp/modified-release\" ]")).success
 end
@@ -223,7 +223,7 @@ def setup_ansible_repository(appliance, wait_for_ansible)
   repository = repositories.create(name: "test_playbooks_automate", url: cfme_data.ansible_links.playbook_repositories.embedded_ansible, description: fauxfactory.gen_alpha())
   view = navigate_to(repository, "Details")
   wait_for(lambda{|| repository.status == "successful"}, timeout: 60, fail_func: view.toolbar.refresh.click)
-  yield repository
+  yield(repository)
   repository.delete_if_exists()
 end
 def test_variable_pass(request, appliance, setup_ansible_repository, import_datastore, import_data, instance, dialog, catalog)
@@ -265,7 +265,7 @@ def test_variable_pass(request, appliance, setup_ansible_repository, import_data
   #              For 1b scenario: Variables should be passed through successive playbooks and you
   #              should see logs like this(https://bugzilla.redhat.com/show_bug.cgi?id=1678135#c13)
   #   
-  entry_point = ["Datastore", , "Service", "Provisioning", "StateMachines", "ServiceProvision_Template", ]
+  entry_point = ["Datastore", "#{import_datastore.name}", "Service", "Provisioning", "StateMachines", "ServiceProvision_Template", "#{instance}"]
   catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: fauxfactory.gen_alphanumeric(15, start: "item_disc_"), display_in: true, catalog: catalog, dialog: dialog, provisioning_entry_point: entry_point)
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*if Fred is married to Wilma and Barney is married to Betty and Peebles and BamBam are the kids, then the tests work !!!.*"])).waiting(timeout: 120) {
     service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
@@ -311,6 +311,6 @@ def test_import_domain_containing_playbook_method(request, appliance, setup_ansi
   domain = datastore.import_domain_from(import_data.from_domain, import_data.to_domain)
   request.addfinalizer(domain.delete_if_exists)
   view = appliance.browser.create_view(FileImportSelectorView)
-  error_msg = 
+  error_msg = "Playbook 'invalid_1677575.yml' not found in repository '#{setup_ansible_repository.name}'"
   view.flash.assert_message(text: error_msg, partial: true)
 end

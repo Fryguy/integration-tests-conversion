@@ -36,14 +36,14 @@ def ansible_repository(appliance)
   end
   view = navigate_to(repository, "Details")
   wait_for(lambda{|| view.entities.summary("Properties").get_text_of("Status") == "successful"}, delay: 10, timeout: 60, fail_func: view.toolbar.refresh.click)
-  yield repository
+  yield(repository)
   if is_bool(repository.exists)
     repository.delete()
   end
 end
 def catalog_item(request, appliance, machine_credential, ansible_repository, playbook_type)
   # Add provisioning and retire ansible catalog item
-  cat_item = appliance.collections.catalog_items.create(catalog_item_class: appliance.collections.catalog_items.ANSIBLE_PLAYBOOK, name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), provisioning: {"repository" => ansible_repository.name, "playbook" => , "machine_credential" => machine_credential, "create_new" => true, "provisioning_dialog_name" => fauxfactory.gen_alphanumeric()})
+  cat_item = appliance.collections.catalog_items.create(catalog_item_class: appliance.collections.catalog_items.ANSIBLE_PLAYBOOK, name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), provisioning: {"repository" => ansible_repository.name, "playbook" => "#{playbook_type}.yml", "machine_credential" => machine_credential, "create_new" => true, "provisioning_dialog_name" => fauxfactory.gen_alphanumeric()})
   _cleanup = lambda do
     if is_bool(cat_item.exists)
       cat_item.delete()

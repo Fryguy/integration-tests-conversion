@@ -27,7 +27,7 @@ def db_restore(temp_appliance_extended_db)
   ver = (ver[3] == "_") ? ver[0...3] : ver[0...4]
   db_storage_hostname = conf.cfme_data.bottlenecks.hostname
   db_storage_ssh = SSHClient(hostname: db_storage_hostname, None: conf.credentials.bottlenecks)
-  rand_filename = 
+  rand_filename = "/tmp/db.backup_#{fauxfactory.gen_alphanumeric()}"
   db_storage_ssh.get_file(("{}/db.backup_{}").format(conf.cfme_data.bottlenecks.backup_path, ver), rand_filename)
   app.ssh_client.put_file(rand_filename, "/tmp/evm_db.backup")
   app.evmserverd.stop()

@@ -18,7 +18,7 @@ def setup_temp_appliance_provider(temp_appliance_preconfig, provider)
   temp_appliance_preconfig {
     provider.create()
     wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
-    yield provider
+    yield(provider)
     provider.delete()
   }
 end
@@ -52,7 +52,7 @@ def test_dup_db_entry_refresh(setup_temp_appliance_provider, temp_appliance_prec
       appliance.db.client.session.add(copied_db_entry)
     }
   rescue IntegrityError => ex
-    pytest.fail()
+    pytest.fail("Exception while adding DB entry. #{ex}")
   end
   new_db_entry = image_query.filter(image_table.id == copied_db_entry.id).all()
   raise unless new_db_entry.size == 1

@@ -60,7 +60,7 @@ def full_vm(appliance, provider, full_template)
   vm = appliance.collections.infra_vms.instantiate(random_vm_name(context: "reconfig"), provider, full_template.name)
   vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   vm.refresh_relationships()
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def ensure_vm_stopped(full_vm)
@@ -95,7 +95,7 @@ def vm_state(request, full_vm)
       raise Exception, "Unknown power state - unable to continue!"
     end
   end
-  yield request.param
+  yield(request.param)
 end
 def enable_hot_plugin(provider, full_vm, ensure_vm_stopped)
   if is_bool(provider.one_of(VMwareProvider))
@@ -260,7 +260,7 @@ def test_vm_reconfig_add_remove_network_adapters(request, adapters_type, full_vm
   #   
   orig_config = full_vm.configuration.copy()
   new_config = orig_config.copy()
-  new_config.add_network_adapter(, vlan: adapters_type)
+  new_config.add_network_adapter("Network adapter #{orig_config.num_network_adapters + 1}", vlan: adapters_type)
   add_adapter_request = full_vm.reconfigure(new_config)
   add_adapter_request.wait_for_request(method: "ui")
   request.addfinalizer(add_adapter_request.remove_request)

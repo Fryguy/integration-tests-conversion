@@ -45,14 +45,14 @@ INFRA_COLLECTION = ["clusters", "hosts", "data_stores", "providers", "resource_p
 pytestmark = [pytest.mark.provider(classes: [InfraProvider], selector: ONE), pytest.mark.usefixtures("setup_provider")]
 def category(appliance)
   cg = appliance.collections.categories.create(name: fauxfactory.gen_alphanumeric(8).downcase(), description: fauxfactory.gen_alphanumeric(32), display_name: fauxfactory.gen_alphanumeric(32))
-  yield cg
+  yield(cg)
   if is_bool(cg.exists)
     cg.delete()
   end
 end
 def tag(category)
   tag = category.collections.tags.create(name: fauxfactory.gen_alphanumeric(8).downcase(), display_name: fauxfactory.gen_alphanumeric(32))
-  yield tag
+  yield(tag)
   tag.delete_if_exists()
 end
 def test_tag_crud(tag)
@@ -126,7 +126,7 @@ class TestTagsViaREST
   @@COLLECTIONS_BULK_TAGS = ["services", "vms", "users"]
   def _service_body(**kwargs)
     uid = fauxfactory.gen_alphanumeric(5)
-    body = {"name" => , "description" => }
+    body = {"name" => "test_rest_service_#{uid}", "description" => "Test REST Service #{uid}"}
     body.update(kwargs)
     return body
   end
@@ -223,7 +223,7 @@ class TestTagsViaREST
       assert_response(appliance)
     end
     for (index, name) in enumerate(new_names)
-      record,_ = wait_for(lambda{|| appliance.rest_api.collections.tags.find_by(name: ) || false}, num_sec: 180, delay: 10)
+      record,_ = wait_for(lambda{|| (appliance.rest_api.collections.tags.find_by(name: "%/#{name}")) || false}, num_sec: 180, delay: 10)
       raise unless record[0].id == edited[index].id
       raise unless record[0].name == edited[index].name
     end
@@ -290,7 +290,7 @@ class TestTagsViaREST
     collection = appliance.rest_api.collections.getattr(collection_name)
     collection.reload()
     if is_bool(!collection.all)
-      pytest.skip()
+      pytest.skip("No available entity in #{collection_name} to assign tag")
     end
     entity = collection[-1]
     tag = tags_mod[0]
@@ -331,7 +331,7 @@ class TestTagsViaREST
     end
     new_tags.push({"category" => "department", "name" => "finance"})
     new_tags.push({"name" => "/managed/department/presales"})
-    tags_ids = 
+    tags_ids = tags_mod.map{|t| t.id}.to_set
     tags_ids.add((appliance.rest_api.collections.tags.get(name: "/managed/department/finance")).id)
     tags_ids.add((appliance.rest_api.collections.tags.get(name: "/managed/department/presales")).id)
     tags_count = new_tags.size * entities.size
@@ -345,13 +345,13 @@ class TestTagsViaREST
     for (index, entity) in enumerate(entities)
       entity.tags.reload()
       response[index].id = entity.id
-      raise unless tags_ids.issubset()
+      raise unless tags_ids.issubset(entity.tags.all.map{|t| t.id}.to_set)
     end
     collection.action.unassign_tags(*entities, tags: new_tags)
     assert_response(appliance, results_num: tags_count)
     for entity in entities
       entity.tags.reload()
-      raise unless ( - tags_ids).size == entity.tags.subcount
+      raise unless (entity.tags.all.map{|t| t.id}.to_set - tags_ids).size == entity.tags.subcount
     end
   end
   def test_bulk_assign_and_unassign_invalid_tag(appliance, services_mod, vm, collection_name, users)
@@ -410,8 +410,8 @@ class TestTagsViaREST
     by_tag = tags.map{|tag| tag.name.gsub("/managed", "")}.join(",")
     query_results = collection.query_string(by_tag: by_tag)
     raise unless tagged_services.size == query_results.size
-    result_ids = 
-    tagged_ids = 
+    result_ids = query_results.map{|item| item.id}.to_set
+    tagged_ids = tagged_services.map{|item| item.id}.to_set
     raise unless result_ids == tagged_ids
   end
   def self.COLLECTIONS_BULK_TAGS; @@COLLECTIONS_BULK_TAGS; end

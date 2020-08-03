@@ -26,7 +26,7 @@ def manager(request, appliance, provider)
   rescue NoMethodError
     pytest.skip("Appliance collections did not include parametrized storage manager type ({})".format(request.param))
   end
-  yield collection.all()[0]
+  yield(collection.all()[0])
 end
 def test_manager_navigation(manager)
   # 
@@ -112,7 +112,7 @@ def test_storage_manager_navigation_from_cloudprovider(manager, provider)
   raise unless storage_view.table.row_count == manager_count
   storage_view.paginator.find_row_on_pages(storage_view.table, Name: manager.name).click()
   storage_detail_view = storage_view.browser.create_view(StorageManagerDetailsView)
-  raise unless storage_detail_view.title.text == 
+  raise unless storage_detail_view.title.text == "#{manager.name} (Summary)"
 end
 def test_storage_manager_quadicon_numbers(manager, provider, provider_cleanup, request)
   #  Test whether Storage Manager QuadIcon shows correct numbers

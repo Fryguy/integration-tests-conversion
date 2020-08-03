@@ -88,5 +88,5 @@ def test_set_memory_threshold(appliance, worker, request, set_memory_threshold)
   change_val = change.gsub(".gigabytes", "").to_f
   mem_threshold_real = get_memory_threshold_in_advanced_settings(appliance, worker)
   MESSAGE = "memory threshold have changed incorrectly in advanced settings"
-  raise MESSAGE unless mem_threshold_real == 
+  raise MESSAGE unless mem_threshold_real == "#{change_val}.gigabytes"
 end

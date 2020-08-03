@@ -26,34 +26,34 @@ def prov_data(vm_name, provisioning)
 end
 def set_project_quota(request, appliance, new_project)
   field,value = request.param
-  new_project.set_quota(None: { => true, "field" => value})
+  new_project.set_quota(None: {"#{field}_cb" => true, "field" => value})
   yield
   appliance.server.login_admin()
   appliance.server.browser.refresh()
-  new_project.set_quota(None: { => false})
+  new_project.set_quota(None: {"#{field}_cb" => false})
 end
 def new_project(appliance)
   collection = appliance.collections.projects
   project = collection.create(name: fauxfactory.gen_alphanumeric(15, start: "project_"), description: fauxfactory.gen_alphanumeric(15, start: "project_desc_"), parent: collection.get_root_tenant())
-  yield project
+  yield(project)
   project.delete()
 end
 def new_role(appliance)
   collection = appliance.collections.roles
   role = collection.create(name: fauxfactory.gen_alphanumeric(start: "role_"), vm_restriction: nil, product_features: [[["Everything"], true]])
-  yield role
+  yield(role)
   role.delete()
 end
 def new_group(appliance, new_project, new_role)
   collection = appliance.collections.groups
-  group = collection.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: new_role.name, tenant: )
-  yield group
+  group = collection.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: new_role.name, tenant: "My Company/#{new_project.name}")
+  yield(group)
   group.delete()
 end
 def new_user(appliance, new_group, new_credential)
   collection = appliance.collections.users
   user = collection.create(name: fauxfactory.gen_alphanumeric(start: "user_"), credential: new_credential, email: fauxfactory.gen_email(), groups: new_group, cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   user.delete()
 end
 def test_project_quota_enforce_via_lifecycle_infra(appliance, provider, new_user, set_project_quota, extra_msg, custom_prov_data, approve, prov_data, vm_name, template_name)

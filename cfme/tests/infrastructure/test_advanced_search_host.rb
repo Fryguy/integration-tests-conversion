@@ -30,7 +30,7 @@ def hosts_with_vm_count(hosts, host_collection)
   return sorted(hosts_with_vm_count, key: lambda{|tup| tup[1]})
 end
 def get_expression(user_input: false, op: ">")
-  expression = 
+  expression = "fill_count(Host / Node.VMs, #{op}"
   if is_bool(user_input)
     return expression + ")"
   else
@@ -45,7 +45,7 @@ end
 def hosts_advanced_search(host_collection)
   view = navigate_to(host_collection, "All")
   raise "Cannot do advanced search here!" unless view.entities.search.is_advanced_search_possible
-  yield view
+  yield(view)
   view.entities.search.remove_search_filters()
 end
 def test_can_open_host_advanced_search(hosts_advanced_search)

@@ -101,13 +101,13 @@ def az_pwsh_vm(appliance)
     ip = vm.ip_address
     return !ip.equal?(nil)
   end
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def pwsh_ssh(az_pwsh_vm)
   # Provide vm_ssh_client for ssh operations in the test.
   ssh.SSHClient(hostname: az_pwsh_vm.ip_address, username: credentials["host_default"]["username"], password: credentials["host_default"]["password"]) {|vm_ssh_client|
-    yield vm_ssh_client
+    yield(vm_ssh_client)
   }
 end
 def connect_az_account(pwsh_ssh)
@@ -116,12 +116,12 @@ def connect_az_account(pwsh_ssh)
   #   https://docs.microsoft.com/en-us/powershell/azure/authenticate-azureps
   #   
   path_script = File.join(SPACE,"connect_account.ps1")
-  connect = pwsh_ssh.run_command(, timeout: 180)
+  connect = pwsh_ssh.run_command("pwsh #{path_script}", timeout: 180)
   raise "Failed to connect to Azure account" unless connect.success
 end
 def cfme_vhd(appliance, pwsh_ssh)
   path_script = File.join(SPACE,"get_ip.ps1")
-  ip_of_recourse = pwsh_ssh.run_command(, timeout: 60).output.strip()
+  ip_of_recourse = ((pwsh_ssh.run_command("pwsh #{path_script}| grep -oE \"([0-9]{1,3}\\.){3}[0-9]{1,3}\"", timeout: 60)).output).strip()
   if !ip_of_recourse.equal?(nil)
     pytest.skip("The resource is taken by some other VM in Azure")
   end
@@ -131,44 +131,44 @@ def cfme_vhd(appliance, pwsh_ssh)
   rescue KeyError
     pytest.skip("Skipping since no such key found in yaml")
   end
-  image = pwsh_ssh.run_command(, timeout: 30).output.strip()
+  image = ((pwsh_ssh.run_command("wget -qO- #{url} | grep -Po \'(?<=href=\")[^\"]*\' | grep azure", timeout: 30)).output).strip()
   image_url = urljoin(url, image)
-  pwsh_ssh.run_command(, timeout: 180)
+  pwsh_ssh.run_command("wget #{image_url} -P #{SPACE}", timeout: 180)
   vhd = image.gsub("zip", "vhd")
   pwsh_ssh.run_command(("unzip {} -d {}").format(File.join(SPACE,image), SPACE), timeout: 15 * 60)
-  yield vhd
+  yield(vhd)
   pwsh_ssh.run_command(("rm -f {}").format(File.join(SPACE,image)), timeout: 180)
   pwsh_ssh.run_command(("rm -f {}").format(File.join(SPACE,vhd)), timeout: 180)
 end
 def upload_image_to_azure(cfme_vhd, pwsh_ssh)
   path_script = File.join(SPACE,"upload_vhd.ps1")
   pwsh_ssh.run_command(("sed -i \'1s/.*/$BlobNameSource = \"{vhd}\"/\' {script}").format(script: path_script, vhd: cfme_vhd), timeout: 30)
-  pwsh_ssh.run_command(, timeout: 15 * 60)
+  pwsh_ssh.run_command("pwsh #{path_script}", timeout: 15 * 60)
 end
 def vm_ip(cfme_vhd, pwsh_ssh)
   path_script = File.join(SPACE,"create_vm.ps1")
   pwsh_ssh.run_command(("sed -i \'1s/.*/$BlobNameSource = \"{vhd}\"/\' {script} &&
         sed -i \'2s/.*/$BlobNameDest = \"{b_dest}\"/\' {script} &&
         sed -i \'3s/.*/$VMName = \"{name}\"/\' {script}").format(script: path_script, vhd: cfme_vhd, b_dest: Cfme::cfme_vhd.gsub("azure", "test"), name: Cfme::cfme_vhd.gsub(".x86_64.vhd", "-vm")), timeout: 20)
-  pwsh_ssh.run_command(, timeout: 600)
+  pwsh_ssh.run_command("pwsh #{path_script}", timeout: 600)
   path_get_ip = File.join(SPACE,"get_ip.ps1")
-  ip = pwsh_ssh.run_command(, timeout: 60).output.strip()
-  yield ip
+  ip = ((pwsh_ssh.run_command("pwsh #{path_get_ip}| grep -oE \"([0-9]{1,3}\\.){3}[0-9]{1,3}\"", timeout: 60)).output).strip()
+  yield(ip)
   pwsh_ssh {
     pwsh_ssh.run_command(("sed -i \'1s/.*/$VMName = \"{name}\"/\' {script}").format(script: path_script, name: Cfme::cfme_vhd.gsub(".x86_64.vhd", "-vm")), timeout: 20)
-    pwsh_ssh.run_command(, timeout: 180)
+    pwsh_ssh.run_command("pwsh #{path_script}", timeout: 180)
   }
 end
 def instance_with_ssh_addition_template(appliance, provider)
   form_values = {"customize" => {"custom_template" => {"name" => "SSH key addition template"}}}
   instance = appliance.collections.cloud_instances.create(random_vm_name("prov"), provider, form_values: form_values)
-  yield instance
+  yield(instance)
   instance.delete()
 end
 def stack_without_parameters(provider)
   stack = provider.mgmt.create_stack(name: fauxfactory.gen_alpha(10), template_url: provider.data.provisioning.stack_provisioning.template_without_parameters, capabilities: ["CAPABILITY_IAM"])
   Wait_for::wait_for(lambda{|| stack.status_active}, delay: 15, timeout: 900)
-  yield stack
+  yield(stack)
   stack.delete()
 end
 def ec2_provider_with_sts_creds(appliance)
@@ -179,7 +179,7 @@ def ec2_provider_with_sts_creds(appliance)
   endpoint = EC2Endpoint(assume_role_arn: prov.data.sts_assume_role.role_arn, credentials: creds)
   prov.endpoints = prepare_endpoints(endpoint)
   prov.region_name = prov.data.region_name
-  yield prov
+  yield(prov)
   prov.delete()
 end
 def child_provider(request, appliance, provider)
@@ -188,7 +188,7 @@ def child_provider(request, appliance, provider)
   rescue NoMethodError
     pytest.skip("Appliance collections did not include parametrized child provider type ({})".format(request.param))
   end
-  yield collection.all()[0]
+  yield(collection.all()[0])
 end
 def test_add_cancelled_validation_cloud(request, appliance)
   # Tests that the flash message is correct when add is cancelled.
@@ -638,7 +638,7 @@ def test_cloud_names_grid_floating_ips(appliance, ec2_provider, soft_assert)
   view = navigate_to(floating_ips_collection, "All")
   view.toolbar.view_selector.select("Grid View")
   for entity in view.entities.get_all()
-    title = Text(view, )
+    title = Text(view, "//*[@id=\"miq-gtl-view\"]//a[@title=\"#{entity.data["address"]}\"]")
     soft_assert.(title.is_displayed)
   end
 end
@@ -717,7 +717,7 @@ class TestProvidersRESTAPI
     begin
       network = provider.rest_api_entity.cloud_networks[0]
     rescue IndexError
-      pytest.fail()
+      pytest.fail("No networks found on cloud provider #{provider}")
     end
     network.reload(attributes: "security_groups")
     security_groups = network.security_groups
@@ -803,7 +803,7 @@ def test_vpc_env_selection(setup_provider, request, provider, appliance, provisi
   view = navigate_to(vm.parent, "Provision")
   view.form.fill_with(data, on_change: view.form.submit_button)
   view.flash.assert_no_error()
-  request_description = 
+  request_description = "Provision from [#{template}] to [#{vm_name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui", num_sec: 15 * 60)
   raise "Provisioning failed: {}".format(provision_request.row.last_message.text) unless provision_request.is_succeeded(method: "ui")
@@ -954,11 +954,11 @@ def test_create_azure_vm_from_azure_image(connect_az_account, cfme_vhd, upload_i
   password = credentials["azure_appliance"]["password"]
   ssh.SSHClient(hostname: vm_ip, username: username, password: password) {|app_ssh_client|
     command = "sed -i \"s/.*PermitRootLogin.*/PermitRootLogin yes/g\" /etc/ssh/sshd_config"
-    config = app_ssh_client.run_command(, ensure_user: true)
+    config = app_ssh_client.run_command("echo #{password} | sudo -S #{command}", ensure_user: true)
     raise unless config.success
-    restart = app_ssh_client.run_command(, ensure_user: true)
+    restart = app_ssh_client.run_command("echo #{password} | sudo -S systemctl restart sshd", ensure_user: true)
     raise unless restart.success
-    unlock = app_ssh_client.run_command(, ensure_user: true)
+    unlock = app_ssh_client.run_command("echo #{password} | sudo -S passwd -u root", ensure_user: true)
     raise unless unlock.success
   }
   app.configure()
@@ -1134,10 +1134,10 @@ def test_regions_up_to_date(provider)
   regions_not_in_cfme = Set.new(regions_provider) - Set.new(regions_cfme_texts)
   extra_regions_in_cfme = Set.new(regions_cfme_texts) - Set.new(regions_provider)
   if regions_not_in_cfme.size > 0
-    pytest.fail()
+    pytest.fail("Regions #{regions_not_in_cfme} are not in CFME!")
   end
   if extra_regions_in_cfme.size > 0
-    pytest.fail()
+    pytest.fail("Extra regions in CFME: #{extra_regions_in_cfme}")
   end
 end
 def test_add_ec2_provider_with_non_default_url_endpoint()
@@ -1223,7 +1223,7 @@ def test_add_second_provider(setup_provider, provider, request)
   #           3. Provider should be successfully added.
   #   
   second_provider = get_crud(provider.key)
-  second_provider.name = 
+  second_provider.name = "#{provider.name}-2"
   second_provider.create()
   request.addfinalizer(second_provider.delete_if_exists)
   second_provider.refresh_provider_relationships()

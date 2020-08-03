@@ -69,7 +69,7 @@ def test_cloud_grid_page_per_item(appliance, request, page, value, set_grid)
   items_per_page = view.entities.paginator.items_per_page
   raise unless items_per_page.to_i == limit.to_i
   if item_amt.to_i >= limit.to_i
-    raise  unless max_item.to_i == limit.to_i
+    raise "Gridview Failed for page #{page}!" unless max_item.to_i == limit.to_i
   end
   raise unless max_item.to_i <= item_amt.to_i
 end
@@ -104,7 +104,7 @@ def test_cloud_tile_page_per_item(appliance, request, page, value, set_tile)
   items_per_page = view.entities.paginator.items_per_page
   raise unless items_per_page.to_i == limit.to_i
   if item_amt.to_i >= limit.to_i
-    raise  unless max_item.to_i == limit.to_i
+    raise "Tileview Failed for page #{page}!" unless max_item.to_i == limit.to_i
   end
   raise unless max_item.to_i <= item_amt.to_i
 end
@@ -139,7 +139,7 @@ def test_cloud_list_page_per_item(appliance, request, page, value, set_list)
   items_per_page = view.entities.paginator.items_per_page
   raise unless items_per_page.to_i == limit.to_i
   if item_amt.to_i >= limit.to_i
-    raise  unless max_item.to_i == limit.to_i
+    raise "Listview Failed for page #{page}!" unless max_item.to_i == limit.to_i
   end
   raise unless max_item.to_i <= item_amt.to_i
 end

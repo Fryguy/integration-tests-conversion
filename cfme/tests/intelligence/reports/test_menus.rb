@@ -29,7 +29,7 @@ def shuffle(l)
 end
 def report_menus(group, appliance)
   report_menus = appliance.collections.intel_report_menus.instantiate()
-  yield report_menus
+  yield(report_menus)
   report_menus.reset_to_default(group)
 end
 def get_custom_report(appliance)
@@ -38,7 +38,7 @@ def get_custom_report(appliance)
   file_path = fs.download("testing_report.yaml")
   collection.import_report(file_path)
   report = collection.instantiate(type: "My Company (All Groups)", subtype: "Custom", menu_name: "testing report", title: "testing report title")
-  yield report
+  yield(report)
   report.delete_if_exists()
 end
 def test_shuffle_top_level(appliance, group, report_menus)

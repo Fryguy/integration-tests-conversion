@@ -17,7 +17,7 @@ GEN_OBJ_DIRECTORY = "/var/www/miq/vmdb/tmp/generic_object_definitions"
 def gen_obj_def_import_export(appliance)
   appliance.context.use(ViaREST) {
     definition = appliance.collections.generic_object_definitions.create(name: fauxfactory.gen_alphanumeric(28, start: "rest_gen_class_imp_exp_"), description: "Generic Object Definition", attributes: {"addr01" => "string"}, methods: ["add_vm", "remove_vm"])
-    yield definition
+    yield(definition)
     definition.delete_if_exists()
   }
 end
@@ -31,18 +31,18 @@ def test_generic_object_definition_crud(appliance, context, soft_assert)
   #       tags: 5.9
   #   
   appliance.context.use(context) {
-    definition = appliance.collections.generic_object_definitions.create(name: , description: "Generic Object Definition", attributes: {"addr01" => "string"}, associations: {"services" => "Service"}, methods: ["hello_world"])
+    definition = appliance.collections.generic_object_definitions.create(name: "#{context.name.downcase()}_generic_class#{fauxfactory.gen_alphanumeric()}", description: "Generic Object Definition", attributes: {"addr01" => "string"}, associations: {"services" => "Service"}, methods: ["hello_world"])
     if context.name == "UI"
       view = appliance.browser.create_view(BaseLoggedInPage)
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("Generic Object Class \"#{definition.name}\" has been successfully added.")
     end
     raise unless definition.exists
     update(definition) {
-      definition.name = 
+      definition.name = "#{definition.name}_updated"
       definition.attributes = {"new_address" => "string"}
     }
     if context.name == "UI"
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("Generic Object Class \"#{definition.name}\" has been successfully saved.")
       view = navigate_to(definition, "Details")
       soft_assert.(view.summary("Attributes (2)").get_text_of("new_address"))
       soft_assert.(view.summary("Attributes (2)").get_text_of("addr01"))
@@ -54,7 +54,7 @@ def test_generic_object_definition_crud(appliance, context, soft_assert)
     end
     definition.delete()
     if is_bool(context.name == "UI" && !BZ(bug_id: 1644658, forced_streams: ["5.10"]).blocks)
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("Generic Object Class:\"#{definition.name}\" was successfully deleted")
     end
     raise unless !definition.exists
   }
@@ -118,13 +118,13 @@ def test_import_export_generic_object_definition(request, appliance, gen_obj_def
   #           3. Generic object definition is deleted
   #           4. Generic object definition once again exists on the appliance
   #   
-  raise unless appliance.ssh_client.run_command().success
+  raise unless appliance.ssh_client.run_command("mkdir #{GEN_OBJ_DIRECTORY}").success
   cleanup = lambda do
-    raise unless appliance.ssh_client.run_command().success
+    raise unless (appliance.ssh_client.run_command("rm -rf #{GEN_OBJ_DIRECTORY}")).success
   end
-  raise unless appliance.ssh_client.run_rake_command().success
+  raise unless (appliance.ssh_client.run_rake_command("evm:export:generic_object_definitions -- --directory #{GEN_OBJ_DIRECTORY}")).success
   begin
-    appliance.ssh_client.open_sftp().open() {|f|
+    appliance.ssh_client.open_sftp().open("#{GEN_OBJ_DIRECTORY}/#{gen_obj_def_import_export.name}.yaml") {|f|
       data = yaml.safe_load(f)[0]["GenericObjectDefinition"]
     }
   rescue IOError

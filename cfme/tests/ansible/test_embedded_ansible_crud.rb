@@ -8,7 +8,7 @@ pytestmark = [test_requirements.ansible]
 def embedded_appliance(appliance)
   appliance.enable_embedded_ansible_role()
   raise unless appliance.is_embedded_ansible_running
-  yield appliance
+  yield(appliance)
   appliance.disable_embedded_ansible_role()
 end
 def test_embedded_ansible_enable(embedded_appliance)
@@ -27,7 +27,7 @@ def test_embedded_ansible_enable(embedded_appliance)
     raise unless wait_for(lambda{|| embedded_appliance.rabbitmq_server.running}, num_sec: 30)
     raise unless wait_for(lambda{|| embedded_appliance.nginx.running}, num_sec: 30)
     endpoint = is_bool(embedded_appliance.is_pod) ? "api" : "ansibleapi"
-    raise unless embedded_appliance.ssh_client.run_command(, container: embedded_appliance.ansible_pod_name)
+    raise unless embedded_appliance.ssh_client.run_command("curl -kL https://localhost/#{endpoint} | grep \"AWX REST API\"", container: embedded_appliance.ansible_pod_name)
   end
 end
 def test_embedded_ansible_disable(embedded_appliance)
@@ -70,14 +70,14 @@ def test_embedded_ansible_event_catcher_process(embedded_appliance)
     result = embedded_appliance.ssh_client.run_rake_command("evm:status | grep 'EmbeddedAnsible'").output
     for data in result.split("
 ")
-      logger.info()
+      logger.info("Checking service/process #{data} started or not")
       raise unless data.include?("started")
     end
   else
     rpm_check = (embedded_appliance.ssh_client.run_command("rpm -qa | grep 'ansible-runner'")).output
     for data in rpm_check.split("
 ")
-      logger.info()
+      logger.info("Checking #{data} is present or not")
       raise unless data.include?("ansible-runner")
     end
   end

@@ -12,7 +12,7 @@ def collection(appliance)
 end
 def image_type(appliance)
   image_type = appliance.collections.system_image_types.create(name: fauxfactory.gen_alphanumeric(8), provision_type: SystemImageType.VM_OR_INSTANCE)
-  yield image_type
+  yield(image_type)
   image_type.delete()
 end
 def test_customization_template_crud(collection, script_type, image_type)
@@ -25,7 +25,7 @@ def test_customization_template_crud(collection, script_type, image_type)
   #   
   template_crud = collection.create(name: fauxfactory.gen_alphanumeric(15, script_type), description: fauxfactory.gen_alphanumeric(16), image_type: image_type.name, script_type: script_type, script_data: "Testing the script")
   update(template_crud) {
-    template_crud.name = 
+    template_crud.name = "#{template_crud.name}_update"
   }
   collection.delete(false, template_crud)
 end

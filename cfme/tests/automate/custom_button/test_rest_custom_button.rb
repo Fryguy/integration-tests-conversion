@@ -36,7 +36,7 @@ end
 class TestCustomButtonRESTAPI
   def buttons_groups(request, appliance, obj_type)
     if is_bool(BZ(1827818, forced_streams: ["5.11"]).blocks && request.param == "custom_buttons")
-      pytest.skip()
+      pytest.skip("Setup fails BZ-1827818; unable to create custom button with rest")
     end
     button_type = CLASS_MAP[obj_type]["rest"]
     num_conditions = 2
@@ -146,7 +146,7 @@ class TestCustomButtonRESTAPI
     entities,_type = buttons_groups
     num_entities = entities.size
     uniq = num_entities.times.map{|_| fauxfactory.gen_alphanumeric(5)}
-    new = uniq.map{|u| {"name" => , "description" => }}
+    new = uniq.map{|u| {"name" => "Edited_#{u}", "description" => "Edited_#{u}"}}
     if is_bool(from_detail)
       edited = []
       for index in num_entities.times
@@ -193,6 +193,6 @@ def test_associate_unassigned_buttons_rest(appliance, group_rest, buttons_rest)
   view = navigate_to(gp, "ObjectType")
   view.browser.refresh()
   view = navigate_to(gp, "Details")
-  ui_assinged_btns = 
-  raise unless ui_assinged_btns == 
+  ui_assinged_btns = view.assigned_buttons.map{|btn| btn["Text"].text}.to_set
+  raise unless ui_assinged_btns == buttons_rest.map{|btn| btn.name}.to_set
 end

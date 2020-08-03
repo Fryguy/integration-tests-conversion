@@ -28,7 +28,7 @@ def infra_map(appliance, source_provider, provider)
   infra_mapping_data = infra_mapping_default_data(source_provider, provider)
   infra_mapping_collection = appliance.collections.v2v_infra_mappings
   mapping = infra_mapping_collection.create(None: infra_mapping_data)
-  yield mapping
+  yield(mapping)
   infra_mapping_collection.delete(mapping)
 end
 def migration_plan(appliance, infra_map, csv: true)
@@ -46,7 +46,7 @@ end
 def check_vm_status(appliance, infra_map, filetype: "csv", content: false, table_hover: false, alert: false, security_group: false)
   # Function to import csv, select vm and return hover error from migration plan table
   plan_view = migration_plan(appliance, infra_map)
-  temp_file = tempfile.NamedTemporaryFile(suffix: )
+  temp_file = tempfile.NamedTemporaryFile(suffix: ".#{filetype}")
   if is_bool(content)
     open(temp_file.name, "w") {|f|
       f.write(content)
@@ -201,7 +201,8 @@ def test_csv_valid_vm(appliance, infra_map, valid_vm)
   #       casecomponent: V2V
   #       initialEstimate: 1/8h
   #   
-  content = 
+  content = "Name
+#{valid_vm}"
   error_msg = "VM available for migration"
   hover_error = check_vm_status(appliance, infra_map, content: content, table_hover: true)
   raise unless error_msg == hover_error
@@ -215,7 +216,9 @@ def test_csv_duplicate_vm(appliance, infra_map, valid_vm)
   #       casecomponent: V2V
   #       initialEstimate: 1/8h
   #   
-  content = 
+  content = "Name
+#{valid_vm}
+#{valid_vm}"
   error_msg = "Duplicate VM"
   hover_error = check_vm_status(appliance, infra_map, content: content, table_hover: "duplicate")
   raise unless error_msg == hover_error
@@ -229,7 +232,8 @@ def test_csv_archived_vm(appliance, infra_map, archived_vm)
   #       casecomponent: V2V
   #       initialEstimate: 1/8h
   #   
-  content = 
+  content = "Name
+#{archived_vm}"
   error_msg = "VM is inactive"
   hover_error = check_vm_status(appliance, infra_map, content: content, table_hover: true)
   raise unless error_msg == hover_error
@@ -249,8 +253,10 @@ def test_csv_security_group_flavor(appliance, soft_assert, infra_map, valid_vm, 
   rescue [NoMethodError, KeyError]
     pytest.skip("No provider data found.")
   end
-  content = 
+  content = "Name,Security Group,Flavor
+#{valid_vm},#{security_group},#{flavor}
+"
   expected_attributes = check_vm_status(appliance, infra_map, content: content, table_hover: true, security_group: true)
   soft_assert.(expected_attributes["security_group"] == security_group)
-  raise unless [flavor, ].include?(expected_attributes["flavor"])
+  raise unless [flavor, "#{flavor} *"].include?(expected_attributes["flavor"])
 end

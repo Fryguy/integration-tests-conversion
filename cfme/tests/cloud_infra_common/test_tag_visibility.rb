@@ -18,7 +18,7 @@ def tagged_vm(tag, provider)
   collection = provider.appliance.provider_based_collection(provider)
   tag_vm = collection.instantiate(ownership_vm, provider)
   tag_vm.add_tag(tag: tag)
-  yield tag_vm
+  yield(tag_vm)
   tag_vm.appliance.server.login_admin()
   tag_vm.remove_tag(tag: tag)
 end
@@ -50,7 +50,7 @@ def third_tag(appliance)
   # The third tag for multiple conditions
   category = appliance.collections.categories.create(name: fauxfactory.gen_alphanumeric(8).downcase(), description: fauxfactory.gen_alphanumeric(32), display_name: fauxfactory.gen_alphanumeric(32))
   tag = category.collections.tags.create(name: fauxfactory.gen_alphanumeric(8).downcase(), display_name: fauxfactory.gen_alphanumeric(32))
-  yield tag
+  yield(tag)
   tag.delete_if_exists()
 end
 def vms_for_tagging(provider, appliance)
@@ -94,7 +94,7 @@ def check_vm_visibility(user_restricted, appliance)
         actual_visibility = false
       end
     }
-    raise  unless actual_visibility == vis_expect
+    raise "VM visibility is not as expected, expected #{vis_expect}" unless actual_visibility == vis_expect
   end
   return _check_vm_visibility
 end
@@ -218,7 +218,7 @@ def test_tag_expression_and_with_or_with_not(request, vms_for_tagging, location_
   #           2. Check item visibility
   #   
   first_vm,second_vm = vms_for_tagging
-  group = group_with_tag_expression.()
+  group = group_with_tag_expression.("fill_tag(My Company Tags : #{location_tag.category.display_name}, #{location_tag.display_name});select_first_expression;click_and;fill_tag(My Company Tags : #{service_level_tag.category.display_name}, #{service_level_tag.display_name});select_last_expression;click_not;select_last_expression;click_or;fill_tag(My Company Tags : #{third_tag.category.display_name}, #{third_tag.display_name})")
   first_vm.add_tag(location_tag)
   request.addfinalizer(lambda{|| first_vm.remove_tag(location_tag)})
   check_vm_visibility.(group, first_vm, true)
@@ -242,7 +242,7 @@ def test_tag_expression_and_with_or(request, vms_for_tagging, location_tag, serv
   #           2. Check item visibility
   #   
   first_vm,second_vm = vms_for_tagging
-  group = group_with_tag_expression.()
+  group = group_with_tag_expression.("fill_tag(My Company Tags : #{location_tag.category.display_name}, #{location_tag.display_name});select_first_expression;click_and;fill_tag(My Company Tags : #{service_level_tag.category.display_name}, #{service_level_tag.display_name});select_last_expression;click_or;fill_tag(My Company Tags : #{third_tag.category.display_name}, #{third_tag.display_name})")
   first_vm.add_tag(location_tag)
   request.addfinalizer(lambda{|| first_vm.remove_tag(location_tag)})
   check_vm_visibility.(group, first_vm, false)

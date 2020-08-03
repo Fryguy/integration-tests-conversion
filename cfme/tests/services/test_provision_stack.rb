@@ -40,8 +40,8 @@ not_ec2 = ProviderFilter(classes: [EC2Provider], inverted: true)
 pytestmark = [pytest.mark.meta(server_roles: "+automate"), pytest.mark.ignore_stream("upstream"), test_requirements.stack, pytest.mark.tier(2), pytest.mark.usefixtures("setup_provider_modscope"), pytest.mark.provider(gen_func: providers, filters: [cloud_filter], selector: ONE_PER_TYPE, scope: "module")]
 def stack_data(appliance, provider, provisioning, request)
   random_base = fauxfactory.gen_alphanumeric()
-  stackname = 
-  vm_name = 
+  stackname = "test#{random_base}"
+  vm_name = "test-#{random_base}"
   stack_timeout = "20"
   if is_bool(provider.one_of(AzureProvider))
     begin
@@ -49,7 +49,7 @@ def stack_data(appliance, provider, provisioning, request)
       vm_user = credentials[template.creds].username
       vm_password = credentials[template.creds].password
     rescue NoMethodError
-      pytest.skip()
+      pytest.skip("Could not find small_template or credentials for #{provider.name}")
     end
     stack_data = {"stack_name" => stackname, "resource_group" => provisioning.get("resource_group"), "deploy_mode" => provisioning.get("mode"), "location" => provisioning.get("region_api"), "vmname" => vm_name, "vmuser" => vm_user, "vmpassword" => vm_password, "vmsize" => provisioning.get("vm_size"), "cloudnetwork" => provisioning.get("cloud_network").split()[0], "cloudsubnet" => provisioning.get("cloud_subnet").split()[0]}
     if request.node.name.include?("test_error_message_azure")
@@ -79,7 +79,7 @@ def template(appliance, provider, provisioning, dialog_name)
   collection = appliance.collections.orchestration_templates
   template = collection.create(template_group: template_group, template_name: template_name, template_type: template_type, description: "my template", content: content)
   template.create_service_dialog_from_template(dialog_name)
-  yield template
+  yield(template)
   if is_bool(template.exists)
     template.delete()
   end
@@ -87,7 +87,7 @@ end
 def catalog(appliance)
   cat_name = fauxfactory.gen_alphanumeric(start: "cat_")
   catalog = appliance.collections.catalogs.create(name: cat_name, description: "my catalog")
-  yield catalog
+  yield(catalog)
   if is_bool(catalog.exists)
     catalog.delete()
   end
@@ -95,7 +95,7 @@ end
 def catalog_item(appliance, dialog, catalog, template, provider, dialog_name)
   item_name = fauxfactory.gen_alphanumeric(15, start: "cat_item_")
   catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.ORCHESTRATION, name: item_name, description: "my catalog", display_in: true, catalog: catalog, dialog: dialog_name, orch_template: template, provider_name: provider.name)
-  yield catalog_item
+  yield(catalog_item)
   if is_bool(catalog_item.exists)
     catalog_item.delete()
   end
@@ -109,13 +109,13 @@ def stack_created(appliance, provider, order_stack, stack_data)
   raise unless provision_request.is_succeeded()
   stack = appliance.collections.cloud_stacks.instantiate(stack_data["stack_name"], provider: provider)
   stack.wait_for_exists()
-  yield stack
+  yield(stack)
 end
 def order_stack(appliance, provider, stack_data, service_catalogs)
   # Fixture which prepares provisioned stack
   provision_request = service_catalogs.order()
   stack = appliance.collections.cloud_stacks.instantiate(stack_data["stack_name"], provider: provider)
-  yield provision_request
+  yield(provision_request)
   prov_req_cleanup(appliance, provision_request)
   if is_bool(stack.delete_if_exists())
     stack.wait_for_not_exists()

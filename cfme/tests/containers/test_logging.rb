@@ -37,7 +37,7 @@ def kibana_logging_url(provider)
   if all_logging_routes.size >= NUM_OF_DEFAULT_LOG_ROUTES
     # pass
   else
-    pytest.skip()
+    pytest.skip("Missing logging routes for #{provider.name}")
   end
   kibana_router = []
   for route in all_logging_routes
@@ -46,7 +46,7 @@ def kibana_logging_url(provider)
     end
   end
   if is_bool(!kibana_router)
-    pytest.skip()
+    pytest.skip("Could not determine Kibana Router for provider #{provider.name}")
   end
   return kibana_router
 end

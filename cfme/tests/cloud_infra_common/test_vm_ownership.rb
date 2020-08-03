@@ -23,11 +23,11 @@ def vm_crud(provider)
   begin
     vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   rescue KeyError
-    msg = 
+    msg = "Missing template for provider #{provider.key}"
     logger.exception(msg)
     pytest.skip(msg)
   end
-  yield vm
+  yield(vm)
   begin
     vm.cleanup_on_provider()
   rescue Exception
@@ -37,28 +37,28 @@ end
 def role_only_user_owned(appliance)
   appliance.server.login_admin()
   role = appliance.collections.roles.create(name: fauxfactory.gen_alphanumeric(25, start: "role_only_user_owned_"), vm_restriction: "Only User Owned")
-  yield role
+  yield(role)
   appliance.server.login_admin()
   role.delete()
 end
 def group_only_user_owned(appliance, role_only_user_owned)
   group_collection = appliance.collections.groups
   group = group_collection.create(description: fauxfactory.gen_alphanumeric(25, start: "group_only_user_owned_"), role: role_only_user_owned.name)
-  yield group
+  yield(group)
   appliance.server.login_admin()
   group.delete()
 end
 def role_user_or_group_owned(appliance)
   appliance.server.login_admin()
   role = appliance.collections.roles.create(name: fauxfactory.gen_alphanumeric(30, start: "role_user_or_group_owned_"), vm_restriction: "Only User or Group Owned")
-  yield role
+  yield(role)
   appliance.server.login_admin()
   role.delete()
 end
 def group_user_or_group_owned(appliance, role_user_or_group_owned)
   group_collection = appliance.collections.groups
   group = group_collection.create(description: fauxfactory.gen_alphanumeric(30, start: "group_user_or_group_owned_"), role: role_user_or_group_owned.name)
-  yield group
+  yield(group)
   appliance.server.login_admin()
   group.delete()
 end
@@ -71,19 +71,19 @@ def new_credential()
 end
 def user1(appliance, group_only_user_owned)
   user1 = new_user(appliance, group_only_user_owned)
-  yield user1
+  yield(user1)
   appliance.server.login_admin()
   user1.delete()
 end
 def user2(appliance, group_only_user_owned)
   user2 = new_user(appliance, group_only_user_owned)
-  yield user2
+  yield(user2)
   appliance.server.login_admin()
   user2.delete()
 end
 def user3(appliance, group_user_or_group_owned)
   user3 = new_user(appliance, group_user_or_group_owned)
-  yield user3
+  yield(user3)
   appliance.server.login_admin()
   user3.delete()
 end

@@ -18,5 +18,5 @@ def test_appliance_version(appliance)
   #   
   ssh_version = appliance.version.to_s
   ui_version = about.get_detail(about.VERSION, server: appliance.server)
-  raise  unless ui_version.startswith(ssh_version)
+  raise "UI: #{ui_version}, SSH: #{ssh_version}" unless ui_version.startswith(ssh_version)
 end

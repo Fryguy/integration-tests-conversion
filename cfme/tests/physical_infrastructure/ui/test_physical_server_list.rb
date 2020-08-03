@@ -4,7 +4,7 @@ require_relative 'cfme/utils/appliance/implementations/ui'
 include Cfme::Utils::Appliance::Implementations::Ui
 pytestmark = [pytest.mark.tier(3), pytest.mark.provider([LenovoProvider], scope: "module")]
 def physical_server_collection(appliance, provider, setup_provider_modscope)
-  yield appliance.collections.physical_servers
+  yield(appliance.collections.physical_servers)
 end
 def test_physical_servers_view_displayed(physical_server_collection)
   # Navigate to the physical servers page and verify that servers are displayed

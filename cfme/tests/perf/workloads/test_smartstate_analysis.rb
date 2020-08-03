@@ -52,7 +52,7 @@ def test_workload_smartstate_analysis(appliance, request, scenario)
     .monitor_thread.join
     add_workload_quantifiers(quantifiers, scenario_data)
     timediff = time.time() - starttime
-    logger.info()
+    logger.info("Finished cleaning up monitoring thread in #{timediff}")
   end
   request.addfinalizer(lambda{|| cleanup_workload.call(scenario, from_ts, quantifiers, scenario_data)})
   monitor_thread.start()
@@ -87,7 +87,7 @@ def test_workload_smartstate_analysis(appliance, request, scenario)
     iteration_time = time.time()
     ssa_time = round(iteration_time - start_ssa_time, 2)
     elapsed_time = iteration_time - starttime
-    logger.debug()
+    logger.debug("Time to Queue SmartState Analyses: #{ssa_time}")
     logger.info(("Time elapsed: {}/{}").format(round(elapsed_time, 2), total_time))
     if ssa_time < time_between_analyses
       wait_diff = time_between_analyses - ssa_time

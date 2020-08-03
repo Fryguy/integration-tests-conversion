@@ -72,10 +72,10 @@ def test_host_drift_analysis(appliance, request, a_host, soft_assert, set_host_c
   a_host.run_smartstate_analysis(wait_for_task_result: true)
   navigate_to(a_host, "Details")
   wait_for(lambda{|| view.entities.summary("Relationships").get_text_of("Drift History") == (drift_num_orig + 2).to_s}, delay: 10, num_sec: 360, message: "Waiting for Drift History count to increase", fail_func: appliance.server.browser.refresh)
-  soft_assert.(a_host.equal_drift_results(, "My Company Tags", 0, 1), "Drift analysis results are equal when they shouldn't be")
+  soft_assert.(a_host.equal_drift_results("#{added_tag.category.display_name} (1)", "My Company Tags", 0, 1), "Drift analysis results are equal when they shouldn't be")
   drift_analysis_view = appliance.browser.create_view(HostDriftAnalysis)
   drift_analysis_view.toolbar.same_values_attributes.click()
-  soft_assert.(!drift_analysis_view.drift_analysis.check_section_attribute_availability(), )
+  soft_assert.(!drift_analysis_view.drift_analysis.check_section_attribute_availability("#{added_tag.category.display_name}"), "#{added_tag.display_name} row should be hidden, but not")
   drift_analysis_view.toolbar.different_values_attributes.click()
-  soft_assert.(drift_analysis_view.drift_analysis.check_section_attribute_availability(), )
+  soft_assert.(drift_analysis_view.drift_analysis.check_section_attribute_availability("#{added_tag.category.display_name} (1)"), "#{added_tag.display_name} row should be visible, but not")
 end

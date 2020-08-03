@@ -29,13 +29,13 @@ end
 def policy_for_testing(appliance, policy_name, policy_profile_name)
   policy = appliance.collections.policies.create(HostCompliancePolicy, policy_name)
   policy_profile = appliance.collections.policy_profiles.create(policy_profile_name, policies: [policy])
-  yield policy
+  yield(policy)
   policy_profile.delete()
   policy.delete()
 end
 def assign_policy_for_testing(policy_for_testing, host, policy_profile_name)
   host.assign_policy_profiles(policy_profile_name)
-  yield policy_for_testing
+  yield(policy_for_testing)
   host.unassign_policy_profiles(policy_profile_name)
 end
 def compliance_vm(configure_fleecing_modscope, provider, full_template_modscope)
@@ -51,7 +51,7 @@ def compliance_vm(configure_fleecing_modscope, provider, full_template_modscope)
   if is_bool(!vm.exists)
     vm.wait_to_appear(timeout: 900)
   end
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
   provider.refresh_provider_relationships()
 end
@@ -61,7 +61,7 @@ def analysis_profile(appliance)
     ap.delete()
   end
   appliance.collections.analysis_profiles.create(name: "default", description: "ap-desc", profile_type: appliance.collections.analysis_profiles.VM_TYPE, categories: ["Services", "User Accounts", "Software", "VM Configuration", "System"])
-  yield ap
+  yield(ap)
   if is_bool(ap.exists)
     ap.delete()
   end

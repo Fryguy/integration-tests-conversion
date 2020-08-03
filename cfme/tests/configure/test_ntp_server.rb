@@ -40,7 +40,7 @@ def appliance_date(appliance)
 end
 def chrony_servers(appliance)
   # Return list of the NTP servers from /etc/chrony.conf
-  servers = appliance.ssh_client.run_command().output
+  servers = (appliance.ssh_client.run_command("grep ^server /etc/chrony.conf")).output
   return servers.split("
 ").map{|s| s.split()[1]}
 end
@@ -112,10 +112,10 @@ def test_ntp_server_check(appliance)
   #   
   orig_date = appliance_date(appliance)
   past_date = orig_date - timedelta(days: 1)
-  logger.info()
+  logger.info("Server dates: original #{orig_date}, new #{past_date}.")
   appliance.ssh_client.run_command(POOL_SED_CMD)
   appliance.ssh_client.run_command("systemctl restart chronyd")
-  appliance.ssh_client.run_command()
+  appliance.ssh_client.run_command("date --iso-8601 -s '#{past_date.isoformat()}'")
   raise "Failed to modify appliance date." unless appliance_date(appliance) == past_date
   logger.info("Successfully modified the date in the appliance.")
   wait_for(lambda{|| ((appliance_date(appliance) - orig_date).total_seconds()).abs <= 3600}, delay: 10, num_sec: 300)

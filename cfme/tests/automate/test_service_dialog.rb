@@ -41,7 +41,7 @@ def test_crud_service_dialog(appliance)
   element_data = {"element_information" => {"ele_label" => fauxfactory.gen_alphanumeric(15, start: "ele_label_"), "ele_name" => fauxfactory.gen_alphanumeric(15, start: "ele_name_"), "ele_desc" => fauxfactory.gen_alphanumeric(15, start: "ele_desc_"), "choose_type" => "Text Box"}, "options" => {"default_text_box" => "Default text"}}
   dialog,element = create_dialog(appliance, element_data)
   view = appliance.browser.create_view(DialogsView, wait: "10s")
-  flash_message = 
+  flash_message = "#{dialog.label} was saved"
   view.flash.assert_message(flash_message)
   update(dialog) {
     dialog.description = "my edited description"
@@ -304,7 +304,7 @@ def test_service_dialogs_crud_non_admin_user(appliance, user_self_service_role)
     element_data = {"element_information" => {"ele_label" => fauxfactory.gen_alphanumeric(15, start: "ele_label_"), "ele_name" => fauxfactory.gen_alphanumeric(15, start: "ele_name_"), "ele_desc" => fauxfactory.gen_alphanumeric(15, start: "ele_desc_"), "choose_type" => "Text Box"}, "options" => {"default_text_box" => "Default text"}}
     dialog,element = create_dialog(appliance, element_data)
     view = appliance.browser.create_view(DialogsView, wait: "10s")
-    flash_message = 
+    flash_message = "#{dialog.label} was saved"
     view.flash.assert_message(flash_message)
     update(dialog) {
       dialog.description = "my edited description"
@@ -319,7 +319,7 @@ def custom_button(appliance, import_dialog)
   collection = appliance.collections.button_groups
   button_grp = collection.create(text: fauxfactory.gen_alphanumeric(), hover: fauxfactory.gen_alphanumeric(), type: collection.getattr("USER"))
   button = button_grp.buttons.create(text: fauxfactory.gen_alphanumeric(), hover: fauxfactory.gen_alphanumeric(), dialog: sd, system: "Request", request: "InspectMe")
-  yield [button_grp, button]
+  yield([button_grp, button])
   button.delete_if_exists()
   button_grp.delete_if_exists()
 end
@@ -380,19 +380,19 @@ def test_dialog_element_values_passed_to_button(appliance, import_datastore, imp
   view = navigate_to(user_obj, "Details")
   custom_button_group = Dropdown(view, button_grp.hover)
   view = navigation_to_view(custom_button_group, button)
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*dialog_text_box_1:      .*", ])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*dialog_text_box_1:      .*", ".*dialog_text_box_2: #{view.text_box2.read()}.*"])).waiting(timeout: 120) {
     view.submit.click()
   }
   view = navigation_to_view(custom_button_group, button)
   msg = fauxfactory.gen_alphanumeric()
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [, ])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*dialog_text_box_1: #{msg}.*", ".*dialog_text_box_2: #{view.text_box2.read()}.*"])).waiting(timeout: 120) {
     view.text_box1.fill(msg)
     view.submit.click()
   }
   view = navigation_to_view(custom_button_group, button)
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [, ])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*dialog_text_box_1: #{msg}.*", ".*dialog_text_box_2: also#{view.text_box2.read()}.*"])).waiting(timeout: 120) {
     view.text_box1.fill(msg)
-    view.text_box2.fill()
+    view.text_box2.fill("also#{view.text_box2.read()}")
     view.submit.click()
   }
 end

@@ -121,11 +121,11 @@ def test_host_provisioning(appliance, setup_provider, cfme_data, host_provisioni
   end
   request.addfinalizer(method(:cleanup_host))
   view = navigate_to(test_host, "Provision")
-  note = 
-  provisioning_data = {"request" => {"email" => "template_provisioner@example.com", "first_name" => "Template", "last_name" => "Provisioner", "notes" => note}, "catalog" => {"pxe_server" => pxe_server, "pxe_image" => {"name" => [pxe_image]}}, "environment" => {"provider_name" => provider.name, "datastore_name" => {"name" => datastores}, "cluster" => , "host_name" => prov_host_name}, "customize" => {"root_password" => root_password, "ip_address" => ip_addr, "subnet_mask" => subnet_mask, "gateway" => gateway, "dns_servers" => dns, "custom_template" => {"name" => [pxe_kickstart]}}}
+  note = "Provisioning host #{prov_host_name} on provider #{provider.key}"
+  provisioning_data = {"request" => {"email" => "template_provisioner@example.com", "first_name" => "Template", "last_name" => "Provisioner", "notes" => note}, "catalog" => {"pxe_server" => pxe_server, "pxe_image" => {"name" => [pxe_image]}}, "environment" => {"provider_name" => provider.name, "datastore_name" => {"name" => datastores}, "cluster" => "#{datacenter} / #{cluster}", "host_name" => prov_host_name}, "customize" => {"root_password" => root_password, "ip_address" => ip_addr, "subnet_mask" => subnet_mask, "gateway" => gateway, "dns_servers" => dns, "custom_template" => {"name" => [pxe_kickstart]}}}
   view.form.fill_with(provisioning_data, on_change: view.form.submit_button)
   view.flash.assert_success_message("Host Request was Submitted, you will be notified when your Hosts are ready")
-  request_description = 
+  request_description = "PXE install on [#{prov_host_name}] from image [#{pxe_image}]"
   host_request = appliance.collections.requests.instantiate(request_description)
   host_request.wait_for_request(method: "ui")
   raise unless host_request.row.last_message.text == "Host Provisioned Successfully"

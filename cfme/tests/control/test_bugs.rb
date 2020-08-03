@@ -89,7 +89,7 @@ def vmware_vm(request, virtualcenter_provider)
 end
 def hardware_reconfigured_alert(appliance)
   alert = appliance.collections.alerts.create(fauxfactory.gen_alpha(), evaluate: ["Hardware Reconfigured", {"hardware_attribute" => "RAM"}], timeline_event: true)
-  yield alert
+  yield(alert)
   alert.delete()
 end
 def setup_disk_usage_alert(appliance)
@@ -101,9 +101,9 @@ def setup_disk_usage_alert(appliance)
   raise unless !result.failed
   expression = {"expression" => "fill_count(Server.EVM Workers, >, 0)"}
   alert = appliance.collections.alerts.create(fauxfactory.gen_alpha(), based_on: "Server", evaluate: ["Expression (Custom)", expression], driving_event: "Appliance Operation: Server High /var/www/miq/vmdb/log Disk Usage", notification_frequency: "1 Minute")
-  alert_profile = appliance.collections.alert_profiles.create(ServerAlertProfile, , alerts: [alert])
+  alert_profile = appliance.collections.alert_profiles.create(ServerAlertProfile, "Alert profile for #{alert.description}", alerts: [alert])
   alert_profile.assign_to("Selected Servers", selections: ["Servers", "EVM"])
-  yield [alert, timestamp, query]
+  yield([alert, timestamp, query])
   alert_profile.delete()
   alert.delete()
   appliance.update_advanced_settings({"server" => {"events" => {"disk_usage_gt_percent" => "<<reset>>"}}})
@@ -112,7 +112,7 @@ def setup_disk_usage_alert(appliance)
 end
 def action_for_testing(appliance)
   action_ = appliance.collections.actions.create(fauxfactory.gen_alphanumeric(), action_type: "Tag", action_values: {"tag" => ["My Company Tags", "Department", "Accounting"]})
-  yield action_
+  yield(action_)
   action_.delete()
 end
 def compliance_condition(appliance, virtualcenter_provider)
@@ -123,14 +123,14 @@ def compliance_condition(appliance, virtualcenter_provider)
   end
   expression = "fill_field(VM and Instance : Name, =, {}); select_expression_text; click_or; fill_field(VM and Instance : Name, =, {}); select_expression_text; click_or; fill_field(VM and Instance : Name, =, {}); ".format(vm_name, fauxfactory.gen_alphanumeric(), fauxfactory.gen_alphanumeric())
   condition = appliance.collections.conditions.create(conditions.VMCondition, fauxfactory.gen_alphanumeric(12, start: "vm-name-"), expression: expression)
-  yield condition
+  yield(condition)
   condition.delete()
 end
 def vm_compliance_policy_profile(appliance, compliance_condition)
   policy = appliance.collections.policies.create(VMCompliancePolicy, fauxfactory.gen_alphanumeric(20, start: "vm-compliance-"))
   policy.assign_conditions(compliance_condition)
   profile = appliance.collections.policy_profiles.create(fauxfactory.gen_alphanumeric(26, start: "VM Compliance Profile "), [policy])
-  yield profile
+  yield(profile)
   profile.delete()
   policy.delete()
 end
@@ -198,7 +198,7 @@ def test_check_compliance_history(request, virtualcenter_provider, vmware_vm, ap
   #   Bugzilla:
   #       1375093
   #   
-  policy = appliance.collections.policies.create(VMCompliancePolicy, fauxfactory.gen_alpha(36, start: "Check compliance history policy "), active: true, scope: )
+  policy = appliance.collections.policies.create(VMCompliancePolicy, fauxfactory.gen_alpha(36, start: "Check compliance history policy "), active: true, scope: "fill_field(VM and Instance : Name, INCLUDES, #{vmware_vm.name})")
   request.addfinalizer(lambda{|| is_bool(policy.exists) ? policy.delete() : nil})
   policy_profile = appliance.collections.policy_profiles.create(policy.description, policies: [policy])
   request.addfinalizer(lambda{|| is_bool(policy_profile.exists) ? policy_profile.delete() : nil})
@@ -346,7 +346,7 @@ def test_alert_for_disk_usage(setup_disk_usage_alert)
       return false
     end
   end
-  wait_for(method(:_check_query), delay: 5, num_sec: 600, message: )
+  wait_for(method(:_check_query), delay: 5, num_sec: 600, message: "Waiting for alert #{alert.description} to appear in DB")
 end
 def test_accordion_after_condition_creation(appliance, condition_class)
   # 
@@ -367,7 +367,7 @@ def test_accordion_after_condition_creation(appliance, condition_class)
   end
   condition = appliance.collections.conditions.create(condition_class, fauxfactory.gen_alpha(), expression: "fill_field({} : Name, IS NOT EMPTY)".format(condition_class.FIELD_VALUE))
   view = condition.create_view(conditions.ConditionDetailsView, wait: "10s")
-  raise unless view.conditions.tree.currently_selected == ["All Conditions", , condition.description]
+  raise unless view.conditions.tree.currently_selected == ["All Conditions", "#{condition_class.TREE_NODE} Conditions", condition.description]
 end
 def test_edit_action_buttons(action_for_testing)
   # 
@@ -407,7 +407,7 @@ def test_policy_condition_multiple_ors(appliance, virtualcenter_provider, vm_com
   all_vm_names = all_vms.map{|vm| vm.name}
   vm_name = virtualcenter_provider.data["cap_and_util"]["capandu_vm"]
   if is_bool(!virtualcenter_provider.mgmt.does_vm_exist(vm_name))
-    pytest.skip()
+    pytest.skip("No capandu_vm available on virtualcenter_provider of name #{vm_name}")
   end
   vms = [all_vms.pop(all_vm_names.index(vm_name))]
   begin
@@ -417,7 +417,7 @@ def test_policy_condition_multiple_ors(appliance, virtualcenter_provider, vm_com
   end
   filtered_collection = collection.filter({"names" => vms.map{|vm| vm.name}})
   view = navigate_to(filtered_collection, "PolicySimulation")
-  view.fill({"form" => {"policy_profile" => }})
+  view.fill({"form" => {"policy_profile" => "#{vm_compliance_policy_profile.description}"}})
   for entity in view.form.entities.get_all()
     state = entity.data["quad"]["bottomRight"]["tooltip"]
     if entity.name == vm_name

@@ -25,7 +25,7 @@ def test_get_hardware_attributes(appliance, physical_server, attribute)
   #       casecomponent: Rest
   #       initialEstimate: 1/4h
   #   
-  expanded_attribute = 
+  expanded_attribute = "hardware.#{attribute}"
   physical_server.reload(attributes: [expanded_attribute])
   assert_response(appliance)
   raise unless !physical_server.hardware[attribute].equal?(nil)

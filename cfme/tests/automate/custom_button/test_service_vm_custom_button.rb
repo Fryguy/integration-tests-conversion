@@ -26,7 +26,7 @@ pytestmark = [pytest.mark.tier(2), test_requirements.custom_button, pytest.mark.
 def button_group(appliance)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: collection.getattr("VM_INSTANCE"))
-  yield button_gp
+  yield(button_gp)
   button_gp.delete_if_exists()
 end
 def setup_dynamic_dialog(appliance, custom_instance)
@@ -46,7 +46,7 @@ def setup_dynamic_dialog(appliance, custom_instance)
   tab = sd.tabs.create(tab_label: fauxfactory.gen_alphanumeric(start: "tab_"), tab_desc: "my tab desc")
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   box.elements.create(element_data: [element_data])
-  yield [sd, ele_name]
+  yield([sd, ele_name])
   sd.delete_if_exists()
 end
 def test_custom_button_display_service_vm(request, appliance, service_vm, button_group)
@@ -148,7 +148,7 @@ def test_custom_button_with_dynamic_dialog_vm(appliance, provider, request, serv
       serv = view.service_name(ele_name)
       serv.dropdown.wait_displayed()
       raise unless serv.dropdown.selected_option == service.vm_name
-      log = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: ["Attributes - Begin", ])
+      log = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: ["Attributes - Begin", "name = \"#{service.vm_name}\""])
       log.start_monitoring()
       submit = (context === ViaUI) ? "submit" : "submit_request"
       view.getattr(submit).click()

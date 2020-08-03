@@ -83,7 +83,7 @@ def test_vm_genealogy_detected(request, setup_provider, provider, small_template
       logger.exception("The parent template not detected!")
       pytest.fail("The parent template not detected!")
     end
-    raise  unless vm_crud_ancestors.include?(small_template.name)
+    raise "#{small_template.name} is not in #{create_vm.name}'s ancestors" unless vm_crud_ancestors.include?(small_template.name)
   end
 end
 def test_genealogy_comparison(create_vm_with_clone, soft_assert)

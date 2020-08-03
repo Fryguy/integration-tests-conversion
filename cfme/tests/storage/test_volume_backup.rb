@@ -20,7 +20,7 @@ def backup(appliance, provider)
     backup_name = fauxfactory.gen_alpha(start: "bkup_")
     volume.create_backup(backup_name)
     backup = backup_collection.instantiate(backup_name, provider)
-    yield backup
+    yield(backup)
   else
     pytest.skip("Skipping volume backup tests, provider side volume creation fails")
   end

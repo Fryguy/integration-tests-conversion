@@ -40,7 +40,7 @@ def test_edit_bundle_entry_point(appliance, provider, catalog_item, request)
   #   
   prov_entry_point = ["Datastore", "ManageIQ (Locked)", "Service", "Provisioning", "StateMachines", "ServiceProvision_Template", "CatalogItemInitialization"]
   vm_name = catalog_item.prov_data["catalog"]["vm_name"]
-  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(, provider).cleanup_on_provider()})
+  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate("#{vm_name}0001", provider).cleanup_on_provider()})
   bundle_name = fauxfactory.gen_alphanumeric(12, start: "bundle_")
   catalog_bundle = appliance.collections.catalog_bundles.create(bundle_name, catalog_items: [catalog_item.name], catalog: catalog_item.catalog, description: "catalog_bundle", display_in: true, dialog: catalog_item.dialog, provisioning_entry_point: prov_entry_point)
   view = navigate_to(catalog_bundle, "Edit")
@@ -127,7 +127,7 @@ def test_edit_import_dialog(import_dialog)
     sd.description = description
   }
   view = sd.create_view(DetailsDialogView)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("#{sd.label} was saved")
   view = navigate_to(sd.parent, "All")
   raise unless view.table.row(["Label", sd.label])["description"].text == description
 end

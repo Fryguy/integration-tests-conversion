@@ -11,7 +11,7 @@ def freeipa_provider()
   auth_prov = get_auth_crud("freeipa03")
   cmd = auth_prov.ssh_client.run_command("systemctl stop ntpd")
   raise unless cmd.success
-  yield auth_prov
+  yield(auth_prov)
   cmd = auth_prov.ssh_client.run_command("systemctl start ntpd")
   raise unless cmd.success
 end

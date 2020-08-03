@@ -40,7 +40,7 @@ def testing_vm(appliance, provider, vm_name)
     logger.info("deploying %s on provider %s", vm.name, provider.key)
     vm.create_on_provider(allow_skip: "default", find_in_cfme: true)
   end
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
   if_scvmm_refresh_provider(provider)
 end
@@ -61,7 +61,7 @@ def testing_vm_tools(appliance, provider, vm_name, full_template)
     logger.info("deploying %s on provider %s", vm.name, provider.key)
     vm.create_on_provider(allow_skip: "default", find_in_cfme: true)
   end
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
   if_scvmm_refresh_provider(provider)
 end
@@ -233,7 +233,7 @@ class TestVmDetailsPowerControlPerProvider
     soft_assert.(!testing_vm.mgmt.is_running, "vm running")
     if is_bool(!testing_vm.provider.one_of(RHEVMProvider))
       new_last_boot_time = view.entities.summary("Power Management").get_text_of("Last Boot Time")
-      soft_assert.(new_last_boot_time == last_boot_time, )
+      soft_assert.(new_last_boot_time == last_boot_time, "ui: #{new_last_boot_time} should ==  orig: #{last_boot_time}")
     end
   end
   def test_power_on(appliance, testing_vm, ensure_vm_stopped, soft_assert)
@@ -280,7 +280,7 @@ class TestVmDetailsPowerControlPerProvider
     soft_assert.(testing_vm.mgmt.is_suspended, "vm not suspended")
     if is_bool(!testing_vm.provider.one_of(RHEVMProvider))
       new_last_boot_time = view.entities.summary("Power Management").get_text_of("Last Boot Time")
-      soft_assert.(new_last_boot_time == last_boot_time, )
+      soft_assert.(new_last_boot_time == last_boot_time, "ui: #{new_last_boot_time} should ==  orig: #{last_boot_time}")
     end
   end
   def test_start_from_suspend(appliance, testing_vm, ensure_vm_suspended, soft_assert)
@@ -353,7 +353,7 @@ def test_no_template_power_control(provider, soft_assert)
         action = "Stop"
       end
     end
-    view.flash.assert_message()
+    view.flash.assert_message("#{action} action does not apply to selected items")
     view.flash.dismiss()
   end
   entity.click()
@@ -492,12 +492,12 @@ def test_guest_os_shutdown(appliance, provider, testing_vm_tools, ensure_vm_runn
   soft_assert.(!testing_vm_tools.mgmt.is_running, "vm running")
   if is_bool(!BZ(1571895, forced_streams: ["5.10", "5.11"]).blocks && provider.one_of(RHEVMProvider))
     new_last_boot_time = view.entities.summary("Power Management").get_text_of("Last Boot Time")
-    soft_assert.(new_last_boot_time == last_boot_time, )
+    soft_assert.(new_last_boot_time == last_boot_time, "ui: #{new_last_boot_time} should ==  orig: #{last_boot_time}")
   end
 end
 def new_user(request, appliance)
   user,user_data = _users(request, appliance, group: "EvmGroup-vm_user")
-  yield appliance.collections.users.instantiate(name: user[0].name, credential: Credential(principal: user_data[0]["userid"], secret: user_data[0]["password"]))
+  yield(appliance.collections.users.instantiate(name: user[0].name, credential: Credential(principal: user_data[0]["userid"], secret: user_data[0]["password"])))
   if is_bool(user[0].exists)
     user[0].action.delete()
   end
@@ -536,7 +536,7 @@ def archive_orphan_vm(request, provider, testing_vm)
     provider.delete_if_exists(cancel: false)
     testing_vm.wait_for_vm_state_change(desired_state: "orphaned", timeout: 720, from_details: false, from_any_provider: true)
   end
-  yield [request.param, testing_vm]
+  yield([request.param, testing_vm])
 end
 def test_power_options_on_archived_orphaned_vms_all_page(appliance, archive_orphan_vm)
   # This test case is to check Power option drop-down button is disabled on archived and orphaned
@@ -578,7 +578,7 @@ def test_power_options_on_archived_orphaned_vms_all_page(appliance, archive_orph
         action = "Stop"
       end
     end
-    view.flash.assert_message()
+    view.flash.assert_message("#{action} action does not apply to selected items")
     view.flash.dismiss()
   end
 end

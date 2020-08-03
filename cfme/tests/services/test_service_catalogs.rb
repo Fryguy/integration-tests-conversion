@@ -33,15 +33,15 @@ def test_order_catalog_item(appliance, provider, catalog_item, request, register
   #       tags: service
   #   
   vm_name = catalog_item.prov_data["catalog"]["vm_name"]
-  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(, provider).cleanup_on_provider()})
+  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate("#{vm_name}0001", provider).cleanup_on_provider()})
   register_event.(target_type: "Service", target_name: catalog_item.name, event_type: "service_provisioned")
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
   service_catalogs.order()
-  logger.info()
+  logger.info("Waiting for cfme provision request for service #{catalog_item.name}")
   request_description = catalog_item.name
   provision_request = appliance.collections.requests.instantiate(request_description, partial_check: true)
   provision_request.wait_for_request()
-  msg = 
+  msg = "Provisioning failed with the message #{provision_request.rest.message}"
   raise msg unless provision_request.is_succeeded()
 end
 def test_order_catalog_item_via_rest(request, appliance, provider, catalog_item, catalog)
@@ -85,16 +85,16 @@ def test_order_catalog_bundle(appliance, provider, catalog_item, request)
   #       tags: service
   #   
   vm_name = catalog_item.prov_data["catalog"]["vm_name"]
-  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(, provider).cleanup_on_provider()})
+  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate("#{vm_name}0001", provider).cleanup_on_provider()})
   bundle_name = fauxfactory.gen_alphanumeric(12, start: "bundle_")
   catalog_bundle = appliance.collections.catalog_bundles.create(bundle_name, description: "catalog_bundle", display_in: true, catalog: catalog_item.catalog, dialog: catalog_item.dialog, catalog_items: [catalog_item.name])
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_bundle.name)
   service_catalogs.order()
-  logger.info()
+  logger.info("Waiting for cfme provision request for service #{bundle_name}")
   request_description = bundle_name
   provision_request = appliance.collections.requests.instantiate(request_description, partial_check: true)
   provision_request.wait_for_request()
-  msg = 
+  msg = "Provisioning failed with the message #{provision_request.rest.message}"
   raise msg unless provision_request.is_succeeded()
 end
 def test_no_template_catalog_item(has_no_providers, provider, provisioning, dialog, catalog, appliance)
@@ -127,7 +127,7 @@ def test_request_with_orphaned_template(appliance, provider, catalog_item)
   #   
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
   service_catalogs.order()
-  logger.info()
+  logger.info("Waiting for cfme provision request for service #{catalog_item.name}")
   request_description = catalog_item.name
   provision_request = appliance.collections.requests.instantiate(request_description, partial_check: true)
   provider.delete()
@@ -172,6 +172,6 @@ def test_order_service_after_deleting_provider(appliance, provider, setup_provid
   provision_request.wait_for_request()
   view = navigate_to(provision_request, "Details")
   raise unless view.details.request_details.get_text_of("Request State") == "Finished"
-  last_msg = 
+  last_msg = "Error: Source Template/Vm with id [#{template_id}] has no EMS, unable to provision"
   raise unless view.details.request_details.get_text_of("Last Message") == last_msg
 end

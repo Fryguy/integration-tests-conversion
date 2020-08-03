@@ -48,7 +48,7 @@ def provider_classes(appliance)
   required_providers = all_required(appliance.version)
   selected = {}
   for cat in selected.keys()
-    selected[cat].concat()
+    selected[cat].concat(required_providers.select{|prov| prov.category == cat}.map{|prov| prov.klass}.to_set)
   end
   return selected
 end

@@ -9,7 +9,7 @@ cli_path = "cli".data_path.join
 def rake(appliance)
   appliance.ssh_client.run_rake_command("evm:automate:clear")
   appliance.ssh_client.run_rake_command("evm:automate:reset")
-  yield lambda{|command| appliance.ssh_client.run_rake_command(command)}
+  yield(lambda{|command| appliance.ssh_client.run_rake_command(command)})
   appliance.ssh_client.run_rake_command("evm:automate:clear")
   appliance.ssh_client.run_rake_command("evm:automate:reset")
 end

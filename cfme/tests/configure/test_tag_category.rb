@@ -17,7 +17,7 @@ require_relative 'cfme/utils/wait'
 include Cfme::Utils::Wait
 def custom_category(appliance)
   category = appliance.collections.categories.create(name: fauxfactory.gen_alphanumeric(8).downcase(), description: fauxfactory.gen_alphanumeric(32), display_name: fauxfactory.gen_alphanumeric(32))
-  yield category
+  yield(category)
   category.delete_if_exists()
 end
 def test_category_crud(appliance, soft_assert)
@@ -30,13 +30,13 @@ def test_category_crud(appliance, soft_assert)
   #   
   cg = appliance.collections.categories.create(name: fauxfactory.gen_alphanumeric(8).downcase(), description: fauxfactory.gen_alphanumeric(32), display_name: fauxfactory.gen_alphanumeric(32))
   view = appliance.browser.create_view(navigator.get_class(cg.parent, "All").VIEW)
-  soft_assert.(view.flash.assert_message())
+  soft_assert.(view.flash.assert_message("Category \"#{cg.display_name}\" was added"))
   update(cg) {
     cg.description = fauxfactory.gen_alphanumeric(32)
   }
-  soft_assert.(view.flash.assert_message())
+  soft_assert.(view.flash.assert_message("Category \"#{cg.name}\" was saved"))
   cg.delete()
-  soft_assert.(view.flash.assert_message())
+  soft_assert.(view.flash.assert_message("Category \"#{cg.name}\": Delete successful"))
 end
 def test_query_custom_category_via_api(appliance, custom_category)
   # 

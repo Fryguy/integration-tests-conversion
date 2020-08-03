@@ -27,7 +27,7 @@ ANSIBLE_FILE = "~/test_ansible_file"
 def button_group(appliance, request)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(start: "hvr_"), type: collection.getattr(request.param))
-  yield [button_gp, request.param]
+  yield([button_gp, request.param])
   button_gp.delete_if_exists()
 end
 def setup_obj(button_group, provider)
@@ -52,7 +52,7 @@ def setup_obj(button_group, provider)
       end
     end
   rescue IndexError
-    pytest.skip()
+    pytest.skip("Object not found for #{obj_type} type")
   end
   return obj
 end
@@ -105,9 +105,9 @@ def test_custom_button_ansible_automate_infra_obj(request, appliance, inventory,
     dialog_view.submit.click()
     view.flash.assert_success_message("Order Request was Submitted")
     begin
-      wait_for(client.is_file_available, func_args: [ANSIBLE_FILE], delay: 5, timeout: 240, message: )
+      wait_for(client.is_file_available, func_args: [ANSIBLE_FILE], delay: 5, timeout: 240, message: "Waiting for #{ANSIBLE_FILE} file")
     rescue TimedOutError
-      pytest.fail()
+      pytest.fail("Waiting timeout: unable to locate #{ANSIBLE_FILE} on host #{hostname}")
     end
   }
 end

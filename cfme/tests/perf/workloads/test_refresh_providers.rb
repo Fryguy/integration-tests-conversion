@@ -41,7 +41,7 @@ def test_refresh_providers(appliance, request, scenario)
     .monitor_thread.join
     add_workload_quantifiers(quantifiers, scenario_data)
     timediff = time.time() - starttime
-    logger.info()
+    logger.info("Finished cleaning up monitoring thread in #{timediff}")
   end
   request.addfinalizer(lambda{|| cleanup_workload.call(scenario, from_ts, quantifiers, scenario_data)})
   monitor_thread.start()
@@ -64,7 +64,7 @@ def test_refresh_providers(appliance, request, scenario)
     iteration_time = time.time()
     refresh_time = round(iteration_time - start_refresh_time, 2)
     elapsed_time = iteration_time - starttime
-    logger.debug()
+    logger.debug("Time to Queue Refreshes: #{refresh_time}")
     logger.info(("Time elapsed: {}/{}").format(round(elapsed_time, 2), total_time))
     if refresh_time < time_between_refresh
       wait_diff = time_between_refresh - refresh_time

@@ -45,7 +45,7 @@ def vm_ownership(enable_candu, clean_setup_provider, provider, appliance)
   collection = provider.appliance.provider_based_collection(provider)
   vm = collection.instantiate(vm_name, provider)
   if is_bool(!vm.exists_on_provider)
-    pytest.skip()
+    pytest.skip("Skipping test, #{vm_name} VM does not exist")
   end
   vm.mgmt.ensure_state(VmState.RUNNING)
   group_collection = appliance.collections.groups
@@ -53,8 +53,8 @@ def vm_ownership(enable_candu, clean_setup_provider, provider, appliance)
   user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(), credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: "secret"), email: "abc@example.com", groups: cb_group, cost_center: "Workload", value_assign: "Database")
   begin
     vm.set_ownership(user: user)
-    logger.info()
-    yield user.name
+    logger.info("Assigned VM OWNERSHIP for #{vm_name} running on #{provider.name}")
+    yield(user.name)
   ensure
     vm.unset_ownership()
     user.delete()
@@ -102,7 +102,7 @@ def resource_usage(vm_ownership, appliance, provider)
     ems = appliance.db.client["ext_management_systems"]
     metrics = appliance.db.client["metrics"]
     ret = appliance.ssh_client.run_rails_command("\"vm = Vm.where(:ems_id => {}).where(:name => {})[0];            vm.perf_capture(\'realtime\', 2.hour.ago.utc, Time.now.utc)\"".format(provider.id, repr(vm_name)))
-    raise  unless ret.success
+    raise "Failed to capture VM C&U data:" unless ret.success
     appliance.db.client.transaction {
       result = ems, metrics.parent_ems_id == ems.id.appliance.db.client.session.query(metrics.id).join.filter(metrics.capture_interval_name == "realtime", metrics.resource_name == vm_name, ems.name == provider.name, metrics.timestamp >= date.today())
     }
@@ -116,7 +116,7 @@ def resource_usage(vm_ownership, appliance, provider)
   wait_for(method(:verify_records_metrics_table), [appliance, provider, vm_name], timeout: 600, fail_condition: false, message: "Waiting for VM real-time data")
   appliance.server.settings.disable_server_roles("ems_metrics_coordinator", "ems_metrics_collector")
   ret = appliance.ssh_client.run_rails_command("\"vm = Vm.where(:ems_id => {}).where(:name => {})[0];        vm.perf_rollup_range(2.hour.ago.utc, Time.now.utc,\'realtime\')\"".format(provider.id, repr(vm_name)))
-  raise  unless ret.success
+  raise "Failed to rollup VM C&U data:" unless ret.success
   wait_for(method(:verify_records_rollups_table), [appliance, provider, vm_name], timeout: 600, fail_condition: false, message: "Waiting for hourly rollups")
   appliance.db.client.transaction {
     result = ems, rollups.parent_ems_id == ems.id.appliance.db.client.session.query(rollups.id).join.filter(rollups.capture_interval_name == "hourly", rollups.resource_name == vm_name, ems.name == provider.name, rollups.timestamp >= date.today())
@@ -135,9 +135,9 @@ def metering_report(appliance, vm_ownership, provider)
   owner = vm_ownership
   data = {"menu_name" => "cb_" + provider.name, "title" => "cb_" + provider.name, "base_report_on" => "Metering for VMs", "report_fields" => ["Owner", "Memory Used", "CPU Used", "Disk I/O Used", "Network I/O Used", "Storage Used", "Existence Hours Metric", "Metering Used Metric"], "filter" => {"filter_show_costs" => "Owner", "filter_owner" => owner, "interval_end" => "Today (partial)"}}
   report = appliance.collections.reports.create(is_candu: true, None: data)
-  logger.info()
+  logger.info("Queuing Metering report for #{provider.name} provider")
   report.queue(wait_for_finish: true)
-  yield report.saved_reports.all()[0].data.rows.to_a
+  yield(report.saved_reports.all()[0].data.rows.to_a)
   report.delete()
 end
 def test_validate_cpu_usage(resource_usage, metering_report)

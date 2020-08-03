@@ -343,7 +343,7 @@ def new_user(request, appliance)
   role = appliance.rest_api.collections.roles.get(name: "EvmRole-super_administrator")
   group = _groups(request, appliance, role, tenant: tenant)
   user,user_data = _users(request, appliance, group: group.description)
-  yield [appliance.collections.users.instantiate(name: user[0].name, credential: Credential(principal: user_data[0]["userid"], secret: user_data[0]["password"])), tenant]
+  yield([appliance.collections.users.instantiate(name: user[0].name, credential: Credential(principal: user_data[0]["userid"], secret: user_data[0]["password"])), tenant])
 end
 def test_tenant_attached_with_domain(request, new_user, domain)
   # 
@@ -387,7 +387,7 @@ def user(appliance)
   role = appliance.collections.roles.create(name: fauxfactory.gen_alphanumeric(), product_features: product_features)
   group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(), role: role.name, tenant: appliance.collections.tenants.get_root_tenant().name)
   user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric().downcase(), credential: Credential(principal: fauxfactory.gen_alphanumeric(4), secret: fauxfactory.gen_alphanumeric(4)), email: fauxfactory.gen_email(), groups: group, cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   user.delete_if_exists()
   group.delete_if_exists()
   role.delete_if_exists()
@@ -444,7 +444,7 @@ def test_redhat_domain_sync_after_upgrade(temp_appliance_preconfig, file_name)
   #   
   db_file = FTPClientWrapper(cfme_data.ftpserver.entities.databases).get_file(file_name)
   db_path = File.join("/tmp",db_file.name)
-  raise unless temp_appliance_preconfig.ssh_client.run_command().success
+  raise unless (temp_appliance_preconfig.ssh_client.run_command("curl -o #{db_path} ftp://#{db_file.link}")).success
   (LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [".*domain version on disk differs from db version.*", ".*RedHat domain version on disk differs from db version.*", ".*ManageIQ domain version on disk differs from db version.*"])).waiting(timeout: 1000) {
     temp_appliance_preconfig.db.restore_database(db_path, is_major: bool(temp_appliance_preconfig.version > "5.11"))
   }
@@ -458,7 +458,7 @@ def custom_domain(custom_instance)
   instance.domain.update({"name" => domain_info, "description" => domain_info})
   domain = instance.appliance.collections.domains.instantiate(name: domain_info, description: domain_info)
   domain.lock()
-  yield domain
+  yield(domain)
   domain.delete_if_exists()
 end
 def test_existing_domain_child_override(appliance, custom_domain, import_data)
@@ -508,5 +508,5 @@ def test_existing_domain_child_override(appliance, custom_domain, import_data)
   datastore.import_domain_from(import_data.from_domain, import_data.to_domain)
   view.flash.assert_no_error()
   view = navigate_to(custom_domain, "Details")
-  raise unless view.datastore.tree.has_path("Datastore", , "System", "Process")
+  raise unless view.datastore.tree.has_path("Datastore", "#{custom_domain.name}", "System", "Process")
 end

@@ -15,7 +15,7 @@ def vm_obj(appliance, provider, setup_provider, console_template)
   #   
   vm_obj = appliance.collections.infra_vms.instantiate(random_vm_name("webmks"), provider, console_template.name)
   vm_obj.create_on_provider(timeout: 2400, find_in_cfme: true, allow_skip: "default")
-  yield vm_obj
+  yield(vm_obj)
   vm_obj.cleanup_on_provider()
 end
 def test_webmks_vm_console(request, appliance, provider, vm_obj, configure_websocket, configure_console_webmks, take_screenshot)

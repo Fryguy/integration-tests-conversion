@@ -29,7 +29,7 @@ def volume(appliance, provider)
     end
   else
     if is_bool(provider.one_of(EC2Provider))
-      volume_kwargs["az"] = 
+      volume_kwargs["az"] = "#{provider.region}a"
       volume_kwargs["volume_type"] = "General Purpose SSD (GP2)"
     else
       return false
@@ -37,7 +37,7 @@ def volume(appliance, provider)
   end
   volume = volume_collection.create(None: volume_kwargs)
   raise unless volume.exists
-  yield volume
+  yield(volume)
   begin
     if is_bool(volume.exists)
       volume.delete(wait: true)
@@ -54,7 +54,7 @@ def snapshot(volume)
   rescue TimedOutError
     logger.error("Snapshot Creation fails:TimeoutException due to status not available (=error)")
   end
-  yield snapshot
+  yield(snapshot)
   begin
     if is_bool(snapshot.exists)
       snapshot.delete()
@@ -87,7 +87,7 @@ def test_storage_snapshot_create_cancelled_validation(volume, snapshot_create_fr
   else
     view = volume.create_view(VolumeDetailsView, wait: "10s")
   end
-  view.flash.assert_message()
+  view.flash.assert_message("Snapshot of Cloud Volume \"#{volume.name}\" was cancelled by the user")
 end
 def test_storage_snapshot_create_reset_validation(volume, snapshot_create_from)
   #  Test snapshot create reset button validation
@@ -130,7 +130,7 @@ def test_storage_volume_snapshot_crud(volume, provider, snapshot_create_from)
   snapshot_name = fauxfactory.gen_alpha(start: "snap_")
   snapshot = volume.create_snapshot(snapshot_name, from_manager: snapshot_create_from)
   view = volume.create_view(VolumeDetailsView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Snapshot for Cloud Volume \"#{volume.name}\" created")
   begin
     wait_for(lambda{|| volume.snapshots_count > initial_snapshot_count}, delay: 20, timeout: 1000, fail_func: volume.refresh)
   rescue TimedOutError

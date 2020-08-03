@@ -20,7 +20,7 @@ def testing_vis_object(request, provider, appliance)
   view = is_bool(destination) ? navigate_to(provider, destination) : navigate_to(collection, "All")
   names = view.entities.entity_names
   if is_bool(!names)
-    pytest.skip()
+    pytest.skip("No content found for test of #{collection}")
   end
   return collection.instantiate(name: names[0], provider: provider)
 end

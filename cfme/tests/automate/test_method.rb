@@ -44,7 +44,7 @@ def test_method_crud(klass)
   #   
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: "$evm.log(:info, \":P\")")
   view = method.create_view(ClassDetailsView)
-  view.flash.assert_message()
+  view.flash.assert_message("Automate Method \"#{method.name}\" was added")
   raise unless method.exists
   origname = method.name
   update(method) {
@@ -216,7 +216,7 @@ def generic_object_definition(appliance)
   appliance.context.use(ViaREST) {
     definition = appliance.collections.generic_object_definitions.create(name: fauxfactory.gen_numeric_string(18, start: "LoadBalancer_"), description: "LoadBalancer", attributes: {"location" => "string"}, associations: {"vms" => "Vm", "services" => "Service"})
   }
-  yield definition
+  yield(definition)
   appliance.context.use(ViaREST) {
     definition.delete_if_exists()
   }
@@ -299,7 +299,7 @@ def test_embedded_method_selection(klass)
   path = ["Datastore", "ManageIQ (Locked)", "System", "CommonMethods", "Utils", "log_object"]
   view = navigate_to(klass.methods, "Add")
   view.fill({"location" => "Inline", "embedded_method" => path})
-  raise unless view.embedded_method_table.read()[0]["Path"] == 
+  raise unless view.embedded_method_table.read()[0]["Path"] == "/#{path[2..-1].join("/")}"
 end
 def test_automate_state_method(klass)
   # 
@@ -333,7 +333,7 @@ def test_automate_state_method(klass)
   klass.schema.add_fields({"name" => state, "type" => "State"})
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: "
 $evm.log(:info, \"Hello from state method\")")
-  instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"state" => {"value" => }})
+  instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"state" => {"value" => "METHOD::#{method.name}"}})
   result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Hello from state method.*"])
   result.start_monitoring()
   simulate(appliance: klass.appliance, attributes_values: {"namespace" => klass.namespace.name, "class" => klass.name, "instance" => instance.name}, message: "create", request: "Call_Instance", execute_methods: true)
@@ -374,7 +374,7 @@ ManageIQ::Automate::System::CommonMethods::Utils::LogObject.log_and_notify({},
   request.addfinalizer(method.delete_if_exists)
   instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"schema_name" => {"value" => method.name}})
   request.addfinalizer(instance.delete_if_exists)
-  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [, , ".*Hello Testing Log & Notify.*"], failure_patterns: [".*ERROR.*"])
+  result = LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Validating Notification type: automate_user_#{log_level}.*", ".*Calling Create Notification type: automate_user_#{log_level}.*", ".*Hello Testing Log & Notify.*"], failure_patterns: [".*ERROR.*"])
   result.start_monitoring()
   simulate(appliance: klass.appliance, message: "create", request: "Call_Instance", execute_methods: true, attributes_values: {"namespace" => klass.namespace.name, "class" => klass.name, "instance" => instance.name})
   if log_level == "error"
@@ -438,9 +438,12 @@ def test_automate_user_has_groups(request, appliance, custom_instance)
   #       startsin: 5.8
   #   
   user,user_data = _users(request, appliance)
-  script = dedent()
+  script = dedent("
+        group = $evm.vmdb(:user).find_by_name(\"#{user[0].name}\").miq_groups
+        $evm.log(:info, \"Displaying the user\'s groups: #{group.inspect}\")
+        ")
   instance = custom_instance.(ruby_code: script)
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*#{user_data[0]["group"]["description"]}.*"])).waiting(timeout: 120) {
     simulate(appliance: instance.klass.appliance, message: "create", request: "Call_Instance", execute_methods: true, attributes_values: {"namespace" => instance.klass.namespace.name, "class" => instance.klass.name, "instance" => instance.name})
   }
 end
@@ -461,7 +464,7 @@ def test_copy_with_embedded_method(request, appliance, klass)
   #           2. Copy the method to a new domain
   #   
   path = ["Datastore", "ManageIQ (Locked)", "System", "CommonMethods", "Utils", "log_object"]
-  embedded_method_path = 
+  embedded_method_path = "/#{path[2..-1].join("/")}"
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: "$evm.log(:info, \":P\")", embedded_method: path)
   request.addfinalizer(method.delete_if_exists)
   view = navigate_to(method, "Details")
@@ -485,7 +488,7 @@ def test_delete_tag_from_category(custom_instance)
   #       initialEstimate: 1/12h
   #   
   instance = custom_instance.(ruby_code: tag_delete_from_category)
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: ["true", "false"].map{|value| })).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: ["true", "false"].map{|value| ".*Tag exists: #{value}.*"})).waiting(timeout: 120) {
     simulate(appliance: instance.klass.appliance, message: "create", request: "Call_Instance", execute_methods: true, attributes_values: {"namespace" => instance.klass.namespace.name, "class" => instance.klass.name, "instance" => instance.name})
   }
 end

@@ -18,7 +18,7 @@ include Cfme::Utils::Rest
 pytestmark = [test_requirements.rest, pytest.mark.tier(3)]
 def domain_rest(appliance, domain)
   domain = appliance.collections.domains.create(name: fauxfactory.gen_alpha(), description: fauxfactory.gen_alpha(), enabled: true)
-  yield appliance.rest_api.collections.automate_domains.get(name: domain.name)
+  yield(appliance.rest_api.collections.automate_domains.get(name: domain.name))
   domain.delete_if_exists()
 end
 def test_rest_search_automate(appliance)

@@ -104,7 +104,7 @@ def test_host_graph_screen(provider, interval, graph_type, host, enable_candu)
   end
   wait_for(lambda{|| graph.all_legends.size > 0}, delay: 5, timeout: 200, fail_func: refresh)
   begin
-    vm_avg_graph = view.interval_type.getattr()
+    vm_avg_graph = view.interval_type.getattr("#{graph_type}_vm_avg")
   rescue NoMethodError => e
     logger.error(e)
   end

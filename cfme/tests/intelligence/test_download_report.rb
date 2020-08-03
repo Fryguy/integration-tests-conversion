@@ -9,7 +9,7 @@ include Cfme::Utils::Appliance::Implementations::Ui
 pytestmark = [test_requirements.report]
 def report(appliance)
   saved_report = appliance.collections.reports.instantiate(type: "Configuration Management", subtype: "Virtual Machines", menu_name: "Hardware Information for VMs").queue(wait_for_finish: true)
-  yield saved_report
+  yield(saved_report)
   saved_report.delete(cancel: false)
 end
 def test_download_report(setup_provider_modscope, report, filetype)

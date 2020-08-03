@@ -16,7 +16,7 @@ pytestmark = [pytest.mark.provider([EC2Provider, AzureProvider, GCEProvider, Ope
 def elements_collection(setup_provider_modscope, appliance, provider)
   elements_collection_ = appliance.collections.network_topology_elements
   wait_for(elements_collection_.all, timeout: 10)
-  yield elements_collection_
+  yield(elements_collection_)
   provider.delete_if_exists(cancel: false)
   provider.wait_for_delete()
 end

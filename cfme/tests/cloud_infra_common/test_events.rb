@@ -26,7 +26,7 @@ def vm_crud(provider, setup_provider_modscope, small_template_modscope)
   vm_name = fauxfactory.gen_alpha(20, start: base_name).downcase()
   collection = provider.appliance.provider_based_collection(provider)
   vm = collection.instantiate(vm_name, provider, template_name: template.name)
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def test_vm_create(request, appliance, vm_crud, provider, register_event)

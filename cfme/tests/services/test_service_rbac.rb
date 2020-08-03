@@ -22,7 +22,7 @@ def role_user_group(appliance, new_credential)
   role = new_role(appliance: appliance, product_features: [[["Everything"], false], [["Everything", vm_access_rule], true]])
   group = new_group(appliance: appliance, role: role.name)
   user = new_user(appliance: appliance, group: group, credential: new_credential)
-  yield [role, user]
+  yield([role, user])
   user.delete_if_exists()
   group.delete_if_exists()
   role.delete_if_exists()
@@ -81,11 +81,11 @@ def test_service_rbac_service_catalog(appliance, role_user_group, catalog, catal
     raise unless service_request.is_succeeded()
   }
   _finalize = lambda do
-    rest_vm = appliance.rest_api.collections.vms.get(name: )
+    rest_vm = appliance.rest_api.collections.vms.get(name: "%#{catalog_item.prov_data["catalog"]["vm_name"]}%")
     vm = appliance.collections.infra_vms.instantiate(name: rest_vm.name, provider: provider)
     vm.delete_if_exists()
     vm.wait_to_disappear()
-    request = appliance.collections.requests.instantiate(description: )
+    request = appliance.collections.requests.instantiate(description: "Provisioning Service [#{catalog_item.dialog.label}] from [#{catalog_item.dialog.label}]")
     request.remove_request()
   end
 end
@@ -148,11 +148,11 @@ def test_service_rbac_request(appliance, role_user_group, catalog_item, request,
     raise unless order_request.is_succeeded(method: "ui")
   }
   _finalize = lambda do
-    rest_vm = appliance.rest_api.collections.vms.get(name: )
+    rest_vm = appliance.rest_api.collections.vms.get(name: "%#{catalog_item.prov_data["catalog"]["vm_name"]}%")
     vm = appliance.collections.infra_vms.instantiate(name: rest_vm.name, provider: provider)
     vm.delete_if_exists()
     vm.wait_to_disappear()
-    request = appliance.collections.requests.instantiate(description: )
+    request = appliance.collections.requests.instantiate(description: "Provisioning Service [#{catalog_item.dialog.label}] from [#{catalog_item.dialog.label}]")
     request.remove_request()
   end
 end

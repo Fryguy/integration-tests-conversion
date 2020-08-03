@@ -43,7 +43,7 @@ def test_description_change(appliance, request)
   request.addfinalizer(lambda{|| _reset_region_description.call(old_description, view)})
   view.region_description.fill(region_description)
   view.save.click()
-  view.flash.assert_message()
+  view.flash.assert_message("Region \"#{region_description}\" was saved")
   view.redhat_updates.click()
   reg = (appliance.version < "5.10") ? "Settings Region" : "CFME Region"
   expected_title = "{reg} \"{des} [{num}]\"".format(reg: reg, des: region_description, num: appliance.server.zone.region.number)

@@ -35,7 +35,7 @@ def vm(provider, small_template)
   vm_name = fauxfactory.gen_alpha(18, start: "test-scvmm-")
   vm = provider.appliance.collections.infra_vms.instantiate(vm_name, provider, small_template.name)
   vm.create_on_provider(find_in_cfme: true)
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def cfme_vhd(provider, appliance)
@@ -44,11 +44,11 @@ def cfme_vhd(provider, appliance)
   begin
     url = ("{}/").format(conf.cfme_data["basic_info"]["cfme_images_url"][stream])
   rescue KeyError
-    pytest.skip()
+    pytest.skip("No such stream: #{stream} found in cfme_data.yaml")
   end
   image_name = get_vhd_name(url)
   if is_bool(!image_name)
-    pytest.skip()
+    pytest.skip("No hyperv vhd image at #{url}")
   end
   if appliance.version > "5.10"
     unzip = true
@@ -64,12 +64,12 @@ def cfme_vhd(provider, appliance)
   rescue TimedOutError
     pytest.fail("VHD was not downloaded properly in SCVMM library!")
   end
-  yield cfme_vhd
+  yield(cfme_vhd)
 end
 def scvmm_appliance(provider, cfme_vhd)
   #  Create an appliance from the VHD provided on SCVMM 
   version = re.findall("\\d+", cfme_vhd)[0...4].join(".")
-  template_name = 
+  template_name = "cfme-#{version}-template"
   vhd_path = provider.data.get("vhd_path")
   small_disk = provider.data.get("small_disk")
   if is_bool(!vhd_path)
@@ -109,7 +109,7 @@ def scvmm_appliance(provider, cfme_vhd)
   provider.mgmt.run_script(template_script)
   scvmm_appliance = provision_appliance(provider.key, version: version, template: template_name, vm_name_prefix: "test-cfme")
   delete_zip = scvmm_appliance.version >= "5.11"
-  yield scvmm_appliance
+  yield(scvmm_appliance)
   scvmm_appliance.destroy()
   template = provider.mgmt.get_template(template_name)
   template.delete()
@@ -211,7 +211,7 @@ def test_check_disk_allocation_size_scvmm(vm)
   vm.refresh_relationships(from_details: true)
   view = navigate_to(vm, "Details", force: true)
   usage_after = view.entities.summary("Datastore Actual Usage Summary").get_text_of("Total Datastore Used Space")
-  msg = 
+  msg = "Usage before snapshot: #{usage_before}, Usage after snapshot: #{usage_after}"
   vb,kb = usage_before.split()
   va,ka = usage_after.split()
   usage_before = vb.to_f * SIZES[kb]

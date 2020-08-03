@@ -14,7 +14,7 @@ def sec_group(appliance, provider)
   rescue TimedOutError
     pytest.fail("Timed out creating Security Groups")
   end
-  yield sec_group
+  yield(sec_group)
   if is_bool(sec_group.exists)
     sec_group.delete(wait: true)
   end

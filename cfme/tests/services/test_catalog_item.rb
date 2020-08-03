@@ -33,7 +33,7 @@ def catalog_item(appliance, dialog, catalog)
   view = cat_item.create_view(AllCatalogItemView)
   raise unless view.is_displayed
   view.flash.assert_success_message("Service Catalog Item \"{}\" was added".format(cat_item.name))
-  yield cat_item
+  yield(cat_item)
   begin
     cat_item.delete()
   rescue NoSuchElementException
@@ -47,7 +47,7 @@ def catalog_bundle(appliance, catalog_item)
   #   
   bundle_name = fauxfactory.gen_alphanumeric(15, start: "cat_bundle_")
   catalog_bundle = appliance.collections.catalog_bundles.create(bundle_name, description: "catalog_bundle", display_in: true, catalog: catalog_item.catalog, dialog: catalog_item.dialog, catalog_items: [catalog_item.name])
-  yield catalog_bundle
+  yield(catalog_bundle)
   begin
     catalog_bundle.delete()
   rescue NoSuchElementException
@@ -99,7 +99,7 @@ def test_catalog_item_crud(appliance, dialog, catalog)
   view.flash.assert_message("Edit of Service Catalog Item \"{}\" was cancelled by the user".format(cat_item.description))
   raise unless cat_item.description == "my edited description"
   cat_item.delete()
-  msg = (appliance.version > "5.11") ?  : "The selected Catalog Item was deleted"
+  msg = (appliance.version > "5.11") ? "The catalog item \"#{cat_item.name}\" has been successfully deleted" : "The selected Catalog Item was deleted"
   view.flash.assert_message(msg)
   raise unless !cat_item.exists
 end
@@ -114,7 +114,7 @@ def test_add_button(catalog_item, appliance)
   btn_data = {"text" => fauxfactory.gen_numeric_string(start: "btn_"), "hover" => fauxfactory.gen_numeric_string(15, start: "btn_hvr_"), "image" => "fa-user"}
   catalog_item.add_button(None: btn_data)
   view = appliance.browser.create_view(BaseLoggedInPage)
-  message = 
+  message = "Custom Button \"#{btn_data["hover"]}\" was added"
   view.flash.assert_success_message(message)
 end
 def test_edit_tags_catalog_item(catalog_item)
@@ -140,7 +140,7 @@ def test_catalog_item_duplicate_name(appliance, dialog, catalog)
   cat_item_name = fauxfactory.gen_alphanumeric(15, start: "cat_item_")
   cat_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: cat_item_name, description: "my catalog item", display_in: true, catalog: catalog, dialog: dialog)
   view = cat_item.create_view(AllCatalogItemView, wait: "10s")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Service Catalog Item \"#{cat_item.name}\" was added")
   pytest.raises(RuntimeError) {
     appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: cat_item_name, description: "my catalog item", display_in: true, catalog: catalog, dialog: dialog)
   }

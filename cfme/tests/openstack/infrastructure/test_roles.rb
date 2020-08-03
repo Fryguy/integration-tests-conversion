@@ -8,7 +8,7 @@ ROLES = ["NovaCompute", "Controller", "Compute", "BlockStorage", "SwiftStorage",
 def roles(appliance, provider)
   collection = appliance.collections.deployment_roles.filter({"provider" => provider})
   roles = collection.all()
-  yield is_bool(roles) ? roles : pytest.skip("No Roles Available")
+  yield(is_bool(roles) ? roles : pytest.skip("No Roles Available"))
 end
 def test_host_role_association(appliance, provider, soft_assert)
   # 
@@ -22,7 +22,7 @@ def test_host_role_association(appliance, provider, soft_assert)
   raise unless hosts.size > 0
   for host in hosts
     host.run_smartstate_analysis()
-    task = appliance.collections.tasks.instantiate(name: , tab: "MyOtherTasks")
+    task = appliance.collections.tasks.instantiate(name: "SmartState Analysis for '#{host.name}'", tab: "MyOtherTasks")
     task.wait_for_finished()
     view = navigate_to(host, "Details")
     role_name = view.title.text.split()[1].to_s.translate(nil, "()")

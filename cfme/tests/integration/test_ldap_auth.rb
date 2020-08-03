@@ -16,7 +16,7 @@ def db_user(appliance)
   creds = Credential(principal: name, secret: fauxfactory.gen_alpha())
   user_group = appliance.collections.groups.instantiate(description: "EvmGroup-vm_user")
   user = appliance.collections.users.create(name: name, credential: creds, groups: user_group)
-  yield user
+  yield(user)
   user.delete_if_exists()
 end
 def test_validate_lookup_button_provisioning(appliance, provider, small_template, setup_ldap_auth_provider)
@@ -35,7 +35,7 @@ def test_validate_lookup_button_provisioning(appliance, provider, small_template
   domain = auth_provider.as_fill_value().get("user_suffix")
   view = navigate_to(appliance.collections.infra_vms, "Provision")
   view.form.fill({"template_name" => small_template.name, "provider_name" => provider.name})
-  view.form.request.fill({"email" => })
+  view.form.request.fill({"email" => "#{username}@#{domain}"})
   raise unless !view.form.request.lookup.disabled
   view.form.request.lookup.click()
   view.form.purpose.click()

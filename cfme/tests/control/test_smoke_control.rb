@@ -39,5 +39,5 @@ def test_control_explorer_tree(control_explorer_view, destination, appliance)
   navigate_to(appliance.server, "ControlExplorer", wait_for_view: 30)
   accordion_name = destination.downcase().gsub(" ", "_")
   accordion = control_explorer_view.getattr(accordion_name)
-  accordion.tree.click_path()
+  accordion.tree.click_path("All #{destination}")
 end

@@ -39,9 +39,9 @@ def test_workload_capacity_and_utilization_rep(appliance, request, scenario, set
   appliance.set_pglogical_replication(replication_type: ":none")
   sshtail_evm = SSHTail("/var/www/miq/vmdb/log/evm.log")
   sshtail_evm.set_initial_file_end()
-  logger.info()
+  logger.info("Clean appliance under test (#{ssh_client})")
   appliance.clean_appliance()
-  logger.info()
+  logger.info("Clean master appliance (#{ssh_client_master})")
   master_appliance.clean_appliance()
   if is_bool(is_pglogical)
     scenario_data = {"appliance_ip" => appliance.hostname, "appliance_name" => cfme_performance["appliance"]["appliance_name"], "test_dir" => "workload-cap-and-util-rep", "test_name" => "Capacity and Utilization Replication (pgLogical)", "appliance_roles" => roles_cap_and_util_rep.join(", "), "scenario" => scenario}
@@ -60,7 +60,7 @@ def test_workload_capacity_and_utilization_rep(appliance, request, scenario, set
     .monitor_thread.join
     add_workload_quantifiers(quantifiers, scenario_data)
     timediff = time.time() - starttime
-    logger.info()
+    logger.info("Finished cleaning up monitoring thread in #{timediff}")
   end
   request.addfinalizer(lambda{|| cleanup_workload.call(scenario, from_ts, quantifiers, scenario_data)})
   monitor_thread.start()

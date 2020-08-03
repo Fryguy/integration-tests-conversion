@@ -101,7 +101,7 @@ class TestConditionsRESTAPI
     #     
     num_conditions = conditions.size
     uniq = num_conditions.times.map{|_| fauxfactory.gen_alphanumeric(5)}
-    new = uniq.map{|u| {"description" => }}
+    new = uniq.map{|u| {"description" => "Edited Test Condition #{u}"}}
     if is_bool(from_detail)
       edited = []
       for index in num_conditions.times
@@ -223,7 +223,7 @@ class TestPoliciesRESTAPI
     #     
     num_policies = policies.size
     uniq = num_policies.times.map{|_| fauxfactory.gen_alphanumeric(5)}
-    new = uniq.map{|u| {"description" => }}
+    new = uniq.map{|u| {"description" => "Edited Test Policy #{u}"}}
     if is_bool(from_detail)
       edited = []
       for index in num_policies.times
@@ -261,7 +261,7 @@ class TestPoliciesRESTAPI
     #         initialEstimate: 1/30h
     #     
     policy_name = fauxfactory.gen_alphanumeric(5)
-    data = {"name" => , "description" => , "mode" => "bar", "towhat" => "baz", "conditions_ids" => [2000, 3000], "policy_contents" => [{"event_id" => 2, "actions" => [{"action_id" => 1, "opts" => {"qualifier" => "failure"}}]}]}
+    data = {"name" => "test_policy_#{policy_name}", "description" => "Test Policy #{policy_name}", "mode" => "bar", "towhat" => "baz", "conditions_ids" => [2000, 3000], "policy_contents" => [{"event_id" => 2, "actions" => [{"action_id" => 1, "opts" => {"qualifier" => "failure"}}]}]}
     pytest.raises(APIException, match: "Api::BadRequestError") {
       appliance.rest_api.collections.policies.action.create(data)
     }

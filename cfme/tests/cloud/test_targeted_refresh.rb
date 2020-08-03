@@ -99,7 +99,7 @@ def test_targeted_refresh_network(appliance, provider, request)
   request.addfinalizer(lambda{|| cleanup_if_exists(network)})
   network_collection = appliance.rest_api.collections.cloud_networks
   wait_for(lambda{|| network_collection.get(ems_ref: network.uuid)}, delay: DELAY, timeout: TIMEOUT, handle_exception: true)
-  new_name = 
+  new_name = "test-network-#{fauxfactory.gen_alpha()}"
   network.rename(new_name)
   wait_for(lambda{|| network_collection.get(name: new_name)}, delay: DELAY, timeout: TIMEOUT, handle_exception: true)
   network.delete()

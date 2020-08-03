@@ -69,7 +69,7 @@ def host_ips(provider)
     end
   end
   if is_bool(!ipaddresses)
-    pytest.skip()
+    pytest.skip("No hosts IP addresses found for provider \"#{provider.name}\"")
   end
   ipaddresses.sort!()
   return ipaddresses.to_a
@@ -282,10 +282,10 @@ end
 def setup_provider_min_hosts(request, appliance, provider, num_hosts)
   hosts_yaml = provider.data.get("hosts", {}).size
   if hosts_yaml < num_hosts
-    pytest.skip()
+    pytest.skip("Number of hosts defined in yaml for #{provider} does not meet minimum for test parameter #{num_hosts}, skipping and not setting up provider")
   end
   if provider.mgmt.list_host().size < num_hosts
-    pytest.skip()
+    pytest.skip("Number of hosts on #{provider} does not meet minimum for test parameter #{num_hosts}, skipping and not setting up provider")
   end
   setup_or_skip(request, provider)
 end
@@ -315,13 +315,13 @@ def test_infrastructure_hosts_refresh_multi(appliance, setup_provider_min_hosts,
   plural_char = (num_hosts == 1) ? "" : "s"
   my_slice = slice(0, num_hosts, nil)
   hosts_view = navigate_to(provider.collections.hosts, "All")
-  evm_tail = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [], hostname: appliance.hostname)
+  evm_tail = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: ["'Refresh Provider' successfully initiated for #{num_hosts} Host#{plural_char}"], hostname: appliance.hostname)
   evm_tail.start_monitoring()
   for h in hosts_view.entities.get_all(slice: my_slice)
     h.ensure_checked()
   end
   hosts_view.toolbar.configuration.item_select("Refresh Relationships and Power States", handle_alert: true)
-  hosts_view.flash.assert_success_message()
+  hosts_view.flash.assert_success_message("Refresh initiated for #{num_hosts} Host#{plural_char} from the CFME Database")
   begin
     Wait_for::wait_for(provider.is_refreshed, func_kwargs: {"force_refresh" => false}, num_sec: 300, delay: 10)
   rescue TimedOutError
@@ -429,12 +429,12 @@ def test_infrastructure_hosts_crud(appliance, setup_provider)
   #       1634794
   #   
   host = appliance.collections.hosts.all()[0]
-  new_custom_id = 
+  new_custom_id = "Edit host data. #{fauxfactory.gen_alphanumeric()}"
   update(host, from_details: false) {
     host.custom_ident = new_custom_id
   }
   raise unless navigate_to(host, "Details").entities.summary("Properties").get_text_of("Custom Identifier") == new_custom_id
-  new_custom_id = 
+  new_custom_id = "Edit host data. #{fauxfactory.gen_alphanumeric()}"
   update(host, from_details: true) {
     host.custom_ident = new_custom_id
   }
@@ -444,7 +444,7 @@ def test_infrastructure_hosts_crud(appliance, setup_provider)
   rescue NameError
     existing_custom_id = nil
   end
-  new_custom_id = 
+  new_custom_id = "Edit host data. #{fauxfactory.gen_alphanumeric()}"
   update(host, from_details: true, cancel: true) {
     host.custom_ident = new_custom_id
   }
@@ -474,7 +474,7 @@ def test_infrastructure_hosts_crud(appliance, setup_provider)
       raise
     end
   end
-  new_custom_id = 
+  new_custom_id = "Edit host data. #{fauxfactory.gen_alphanumeric()}"
   view = navigate_to(host, "Edit")
   view.fill({"custom_ident" => new_custom_id})
   view = navigate_to(host.parent, "All")

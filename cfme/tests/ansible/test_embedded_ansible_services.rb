@@ -41,7 +41,7 @@ def local_ansible_catalog_item(appliance, ansible_repository)
   #   
   collection = appliance.collections.catalog_items
   cat_item = collection.create(collection.ANSIBLE_PLAYBOOK, fauxfactory.gen_alphanumeric(), fauxfactory.gen_alphanumeric(), display_in_catalog: true, provisioning: {"repository" => ansible_repository.name, "playbook" => "dump_all_variables.yml", "machine_credential" => "CFME Default Credential", "create_new" => true, "provisioning_dialog_name" => fauxfactory.gen_alphanumeric(), "extra_vars" => [["some_var", "some_value"]]}, retirement: {"repository" => ansible_repository.name, "playbook" => "dump_all_variables.yml", "machine_credential" => "CFME Default Credential", "extra_vars" => [["some_var", "some_value"]]})
-  yield cat_item
+  yield(cat_item)
   cat_item.delete_if_exists()
 end
 def dialog_with_catalog_item(appliance, request, ansible_repository, ansible_catalog)
@@ -73,11 +73,11 @@ def ansible_linked_vm_action(appliance, local_ansible_catalog_item, create_vm)
   }
   action_values = {"run_ansible_playbook" => {"playbook_catalog_item" => local_ansible_catalog_item.name, "inventory" => {"specific_hosts" => true, "hosts" => create_vm.ip_address}}}
   action = appliance.collections.actions.create(fauxfactory.gen_alphanumeric(15, start: "action_"), action_type: "Run Ansible Playbook", action_values: action_values)
-  yield action
+  yield(action)
   action.delete_if_exists()
 end
 def ansible_policy_linked_vm(appliance, create_vm, ansible_linked_vm_action)
-  policy = appliance.collections.policies.create(VMControlPolicy, fauxfactory.gen_alpha(15, start: "policy_"), scope: )
+  policy = appliance.collections.policies.create(VMControlPolicy, fauxfactory.gen_alpha(15, start: "policy_"), scope: "fill_field(VM and Instance : Name, INCLUDES, #{create_vm.name})")
   policy.assign_actions_to_event("Tag Complete", [ansible_linked_vm_action.description])
   policy_profile = appliance.collections.policy_profiles.create(fauxfactory.gen_alpha(15, start: "profile_"), policies: [policy])
   create_vm.assign_policy_profiles(policy_profile.description)
@@ -104,22 +104,22 @@ def provider_credentials(appliance, provider, credential)
     else
       credentials["username"] = creds.principal
       credentials["password"] = creds.secret
-      credentials[hostname] = 
+      credentials[hostname] = "https://#{provider.hostname}/ovirt-engine/api"
     end
   end
-  credential = appliance.collections.ansible_credentials.create(, cred_type, None: credentials)
-  yield credential
+  credential = appliance.collections.ansible_credentials.create("#{cred_type}_credential_#{fauxfactory.gen_alpha()}", cred_type, None: credentials)
+  yield(credential)
   credential.delete_if_exists()
 end
 def ansible_credential(appliance)
   credential = appliance.collections.ansible_credentials.create(fauxfactory.gen_alpha(start: "cred_"), "Machine", username: fauxfactory.gen_alpha(start: "usr_"), password: fauxfactory.gen_alpha(start: "pwd_"))
-  yield credential
+  yield(credential)
   credential.delete_if_exists()
 end
 def custom_service_button(appliance, local_ansible_catalog_item)
   buttongroup = appliance.collections.button_groups.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: appliance.collections.button_groups.SERVICE)
   button = buttongroup.buttons.create(text: fauxfactory.gen_alphanumeric(start: "btn_"), hover: fauxfactory.gen_alphanumeric(15, start: "btn_hvr_"), dialog: local_ansible_catalog_item.provisioning["provisioning_dialog_name"], system: "Request", request: "Order_Ansible_Playbook")
-  yield button
+  yield(button)
   button.delete_if_exists()
   buttongroup.delete_if_exists()
 end
@@ -506,7 +506,7 @@ def test_embed_tower_exec_play_against(appliance, request, local_ansible_catalog
   end
   service_request = ansible_service_catalog.order()
   service_request.wait_for_request(num_sec: 300, delay: 20)
-  request_descr = 
+  request_descr = "Provisioning Service [#{local_ansible_catalog_item.name}] from [#{local_ansible_catalog_item.name}]"
   service_request = appliance.collections.requests.instantiate(description: request_descr)
   service_id = appliance.rest_api.collections.service_requests.get(description: request_descr)
   view = navigate_to(ansible_service, "Details")
@@ -543,10 +543,10 @@ def test_service_ansible_verbosity(appliance, request, local_ansible_catalog_ite
   end
   ansible_service_catalog.order()
   ansible_service_request.wait_for_request()
-  request_descr = 
+  request_descr = "Provisioning Service [#{local_ansible_catalog_item.name}] from [#{local_ansible_catalog_item.name}]"
   service_request = appliance.rest_api.collections.service_requests.get(description: request_descr)
   raise unless log.validate(wait: "60s")
-  logger.info()
+  logger.info("Pattern found #{log.matched_patterns}")
   view = navigate_to(ansible_service, "Details")
   raise unless verbosity[0] == view.provisioning.details.get_text_of("Verbosity")
   raise unless verbosity[0] == view.retirement.details.get_text_of("Verbosity")
@@ -581,7 +581,7 @@ def test_ansible_service_order_vault_credentials(appliance, request, ansible_cat
   #   
   creds = conf.credentials["vault_creds"]["password"]
   creds_dict = {"vault_password" => creds}
-  vault_creds = appliance.collections.ansible_credentials.create(, "Vault", None: creds_dict)
+  vault_creds = appliance.collections.ansible_credentials.create("Vault_Credentials_#{fauxfactory.gen_alpha()}", "Vault", None: creds_dict)
   update(ansible_catalog_item) {
     ansible_catalog_item.provisioning = {"playbook" => "dump_secret_variable_from_vault.yml", "vault_credential" => vault_creds.name}
   }
@@ -695,7 +695,7 @@ def test_service_ansible_service_name(request, appliance, dialog_with_catalog_it
   view.fields(ele_name).fill(service_name)
   time.sleep(5)
   view.submit_button.click()
-  request_descr = 
+  request_descr = "Provisioning Service [#{ansible_cat_item.name}] from [#{ansible_cat_item.name}]"
   service_request = appliance.collections.requests.instantiate(description: request_descr)
   service_request.wait_for_request()
   _revert = lambda do

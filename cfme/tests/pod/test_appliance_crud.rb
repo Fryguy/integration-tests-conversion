@@ -88,7 +88,7 @@ def appliance_data(provider)
 end
 def read_host_file(appliance, path)
   #  Read file on the host 
-  out = appliance.ssh_client.run_command(, ensure_host: true)
+  out = appliance.ssh_client.run_command("cat #{path}", ensure_host: true)
   if is_bool(out.failed)
     pytest.fail("Can't read host file")
   end
@@ -118,7 +118,7 @@ def template_tags(template)
   begin
     return yaml.safe_load(template["custom_data"])["TAGS"]
   rescue [KeyError, NoMethodError] => e
-    pytest.fail()
+    pytest.fail("Can't retrieve template tags: #{e.message}")
   end
 end
 def template_folder(template)
@@ -141,10 +141,10 @@ def create_external_database(appliance)
   user = "root"
   password = appliance.user.credential.secret
   result = appliance.ssh_client.run_command(("env PGPASSWORD={pwd} psql -t -q -d vmdb_production -h {ip} -U {user} -c \"create database {name}\"").format(pwd: password, ip: db_host, name: db_name, user: user))
-  raise  unless result.success
-  yield [db_host, db_name]
+  raise "DB failed creation: #{result.output}" unless result.success
+  yield([db_host, db_name])
   result = appliance.ssh_client.run_command(("env PGPASSWORD={pwd} psql -t -q -d vmdb_production -h {ip} -U {user} -c \"drop database {name}\"").format(pwd: password, ip: db_host, name: db_name, user: user))
-  raise  unless result.success
+  raise "DB drop failed: #{result.output}" unless result.success
 end
 def temp_pod_appliance(appliance, provider, appliance_data, pytestconfig)
   sprout_appliances(appliance, config: pytestconfig, preconfigured: false, provider_type: "openshift", provider: provider.key, template_type: "openshift_pod", wait_time: 1800) {|appliances|
@@ -154,7 +154,7 @@ def temp_pod_appliance(appliance, provider, appliance_data, pytestconfig)
       stack.push(appliance)
       holder = store.config.pluginmanager.get_plugin(PLUGIN_KEY)
       holder.held_appliance = appliance
-      yield appliance
+      yield(appliance)
       stack.pop()
     }
   }
@@ -162,7 +162,7 @@ end
 def temp_extdb_pod_appliance(appliance, provider, extdb_template, template_tags, create_external_database, appliance_data)
   db_host,db_name = create_external_database
   project = (fauxfactory.gen_alphanumeric(20, start: "test-pod-extdb-")).downcase()
-  provision_data = {"template" => extdb_template["name"], "tags" => template_tags, "vm_name" => project, "template_params" => {"DATABASE_IP" => db_host, "DATABASE_NAME" => db_name}, "running_pods" => Set.new(provider.mgmt.required_project_pods) - }
+  provision_data = {"template" => extdb_template["name"], "tags" => template_tags, "vm_name" => project, "template_params" => {"DATABASE_IP" => db_host, "DATABASE_NAME" => db_name}, "running_pods" => Set.new(provider.mgmt.required_project_pods) - Set.new(["postgresql"])}
   begin
     data = provider.mgmt.deploy_template(None: provision_data)
     params = appliance_data.copy()
@@ -182,7 +182,7 @@ def temp_extdb_pod_appliance(appliance, provider, extdb_template, template_tags,
       holder = store.config.pluginmanager.get_plugin(PLUGIN_KEY)
       holder.held_appliance = appliance
       wait_for(method(:is_api_available), func_args: [appliance], num_sec: 30)
-      yield appliance
+      yield(appliance)
       stack.pop()
     }
   ensure
@@ -198,7 +198,8 @@ def temp_pod_ansible_appliance(provider, appliance_data, template_tags)
   begin
     ssh.SSHClient(hostname: params["openshift_creds"]["hostname"], username: params["openshift_creds"]["ssh"]["username"], password: params["openshift_creds"]["ssh"]["password"], oc_username: params["openshift_creds"]["username"], oc_password: params["openshift_creds"]["password"], project: project, is_pod: true) {|ssh_client|
       fulfilled_config = ansible_config.format(host: provider.provider_data["hostname"], subdomain: provider.provider_data["base_url"], proj: project, app_ui_url: tags["cfme-openshift-app-ui"]["url"], app_ui_tag: tags["cfme-openshift-app-ui"]["tag"], app_url: tags["cfme-openshift-app"]["url"], app_tag: tags["cfme-openshift-app"]["tag"], ansible_url: tags["cfme-openshift-embedded-ansible"]["url"], ansible_tag: tags["cfme-openshift-embedded-ansible"]["tag"], httpd_url: tags["cfme-openshift-httpd"]["url"], httpd_tag: tags["cfme-openshift-httpd"]["tag"], memcached_url: tags["cfme-openshift-memcached"]["url"], memcached_tag: tags["cfme-openshift-memcached"]["tag"], db_url: tags["cfme-openshift-postgresql"]["url"], db_tag: tags["cfme-openshift-postgresql"]["tag"])
-      logger.info()
+      logger.info("ansible config file:
+ #{fulfilled_config}")
       tempfile.NamedTemporaryFile("w") {|f|
         f.write(fulfilled_config)
         f.flush()
@@ -208,8 +209,8 @@ def temp_pod_ansible_appliance(provider, appliance_data, template_tags)
       }
       ansible_cmd = ("/usr/bin/ansible-playbook -v -i {inventory_file} /usr/share/ansible/openshift-ansible/playbooks/openshift-management/config.yml").format(inventory_file: remote_file)
       cmd_result = ssh_client.run_command(ansible_cmd, ensure_host: true)
-      logger.info()
-      ssh_client.run_command()
+      logger.info("deployment result: #{cmd_result.output}")
+      ssh_client.run_command("rm -f #{remote_file}")
       raise unless cmd_result.success
       raise "Appliance was not deployed correctly" unless provider.mgmt.is_vm_running(project)
       params["db_host"] = provider.mgmt.expose_db_ip(project)
@@ -218,7 +219,7 @@ def temp_pod_ansible_appliance(provider, appliance_data, template_tags)
       IPAppliance(None: params) {|appliance|
         holder = store.config.pluginmanager.get_plugin(PLUGIN_KEY)
         holder.held_appliance = appliance
-        yield appliance
+        yield(appliance)
       }
     }
   ensure
@@ -236,7 +237,7 @@ def ipa_user(temp_pod_appliance, ipa_auth_provider)
     pytest.fail("No auth users found")
   end
   user = appliance.collections.users.simple_user(user_data.username, credentials[user_data.password].password, fullname: user_data.fullname || user_data.username)
-  yield user
+  yield(user)
   appliance.server.login_admin()
 end
 def aws_provider(temp_pod_appliance)
@@ -247,7 +248,7 @@ def aws_provider(temp_pod_appliance)
   prov.endpoints["smartstate"].credentials.principal = registry_data["username"]
   prov.endpoints["smartstate"].credentials.secret = registry_data["password"]
   prov.create()
-  yield prov
+  yield(prov)
   prov.delete_if_exists()
 end
 def new_ssa_image(temp_pod_appliance, template_folder, aws_provider)
@@ -262,21 +263,21 @@ def new_ssa_image(temp_pod_appliance, template_folder, aws_provider)
   logger.info("Pull image: %s", result)
   raise unless result
   registry_host = registry_data["registry"].split_p("://")[-1]
-  dst_url = 
+  dst_url = "#{registry_host}/#{SSA_IMAGE_STREAM}"
   result = docker_client.tag(image: image_url, repository: dst_url, tag: ss_image_version)
   logger.info("Tag image: %s", result)
   raise unless result
   result = docker_client.push(repository: dst_url, tag: ss_image_version, auth_config: {"username" => registry_data["username"], "password" => registry_data["password"]})
   logger.info("Push image: %s", result)
   raise unless result
-  yield {"registry" => registry_host, "version" => ss_image_version}
+  yield({"registry" => registry_host, "version" => ss_image_version})
 end
 def ssa_vm(aws_provider)
   # Single vm with assigned profile
   collection = aws_provider.appliance.provider_based_collection(aws_provider)
   vm_name = aws_provider.data["cap_and_util"]["capandu_vm"]
   vm = collection.instantiate(vm_name, aws_provider)
-  yield vm
+  yield(vm)
 end
 def temp_ssa_pod_appliance(request, temp_pod_appliance, new_ssa_image)
   appliance = temp_pod_appliance
@@ -557,7 +558,7 @@ def test_pod_appliance_basic_ipa_auth(temp_pod_appliance, provider, setup_provid
   provider.mgmt.wait_pod_running(namespace: appliance.project, name: generator_dc_name)
   logger.info("running configmap generation command inside generator app")
   output_file = "/tmp/ipa_configmap"
-  generator_cmd = ["/usr/bin/bash -c", "\"httpd_configmap_generator", "ipa", , , , , , , , "-d", "-f\""]
+  generator_cmd = ["/usr/bin/bash -c", "\"httpd_configmap_generator", "ipa", "--host=#{appliance.hostname}", "--ipa-server=#{auth_prov.host1}", "--ipa-domain=#{auth_prov.iparealm}", "--ipa-realm=#{auth_prov.iparealm}", "--ipa-principal=#{auth_prov.ipaprincipal}", "--ipa-password=#{auth_prov.bind_password}", "--output=#{output_file}", "-d", "-f\""]
   get_pod_name = lambda do |pattern|
     func = lambda do |name|
       begin
@@ -573,9 +574,9 @@ def test_pod_appliance_basic_ipa_auth(temp_pod_appliance, provider, setup_provid
   generator_pod_name = get_pod_name.call(generator_dc_name)
   logger.info("generator pod name: {}", generator_pod_name)
   sleep(60)
-  logger.info(appliance.ssh_client.run_command(, ensure_host: true))
+  logger.info(appliance.ssh_client.run_command("oc get pods -n #{appliance.project}", ensure_host: true))
   generator_output = (appliance.ssh_client.run_command(("oc exec {pod} -n {ns} -- {cmd}").format(pod: generator_pod_name, ns: appliance.project, cmd: generator_cmd.join(" ")), ensure_host: true)).to_s
-  assert_output = 
+  assert_output = "config map generation failed because of #{generator_output}"
   raise assert_output unless generator_output.include?("Saving Auth Config-Map to")
   httpd_config = provider.mgmt.run_command(namespace: appliance.project, name: generator_pod_name, cmd: ["/usr/bin/cat", output_file])
   logger.info("stopping configmap generator since it is no longer needed")

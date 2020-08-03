@@ -47,7 +47,7 @@ def test_server_actions(physical_servers_collection, physical_servers, provider,
   #   
   view = provider.create_view(PhysicalServersView)
   last_part = (physical_servers.size > 1) ? "s" : ""
-  message = 
+  message = "Requested Server #{method} for the selected server#{last_part}"
   physical_servers_collection.custom_button_action(button, item, physical_servers)
   assert_handler_displayed = lambda do
     if is_bool(view.flash.is_displayed)

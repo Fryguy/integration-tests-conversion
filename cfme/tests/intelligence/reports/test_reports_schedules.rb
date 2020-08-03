@@ -42,7 +42,7 @@ def schedule_data(request)
 end
 def schedule(schedule_data, appliance)
   schedule = appliance.collections.schedules.create(None: schedule_data)
-  yield schedule
+  yield(schedule)
   schedule.delete_if_exists()
 end
 def user(appliance, request)
@@ -165,12 +165,12 @@ def test_reports_schedules_user(appliance, request, user, schedule_data)
   #           1. Create a schedule and check if the newly created user is available
   #           under `User` dropdown.
   #   
-  schedule_data["email"] = {"user_email" => }
+  schedule_data["email"] = {"user_email" => "#{user.name} (#{user.email})"}
   schedule = appliance.collections.schedules.create(None: schedule_data)
   request.addfinalizer(schedule.delete)
   raise unless schedule.exists
   view = schedule.create_view(ScheduleDetailsView)
-  raise unless view.schedule_info.get_text_of("To E-mail") == 
+  raise unless view.schedule_info.get_text_of("To E-mail") == "#{user.name} (#{user.email})"
 end
 def test_miq_schedule_validation_failed(temp_appliance_preconfig)
   # 
@@ -192,7 +192,7 @@ def test_miq_schedule_validation_failed(temp_appliance_preconfig)
   appliance = temp_appliance_preconfig
   dump = FTPClientWrapper(cfme_data.ftpserver.entities.databases).get_file("miqschedule_dump")
   dump_destination = File.join("/tmp",dump.name)
-  if is_bool(!appliance.ssh_client.run_command().success)
+  if is_bool(!(appliance.ssh_client.run_command("curl -o #{dump_destination} ftp://#{dump.link}")).success)
     pytest.fail("Failed to download the file to the appliance.")
   end
   (LogValidator("/var/www/miq/vmdb/log/evm.log", failure_patterns: [".* ERROR .*Validation failed: MiqSchedule:.*Name has already been taken.*Method.*"], matched_patterns: [".*INFO.* Widget: .*chart_server_availability.* file has been .* disk.*", ".*INFO.* : MIQ.*EvmDatabase.seed.* Seeding MiqAction.*"])).waiting() {

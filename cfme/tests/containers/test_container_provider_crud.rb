@@ -29,7 +29,7 @@ def test_container_provider_crud(request, appliance, has_no_providers, provider)
     provider.name = fauxfactory.gen_alpha(8).downcase()
   }
   raise unless view.is_displayed
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Containers Provider \"#{provider.name}\" was saved")
   raise unless provider.name == view.entities.get_first_entity().data.get("name", {}).to_s
   provider.delete()
   raise unless view.is_displayed

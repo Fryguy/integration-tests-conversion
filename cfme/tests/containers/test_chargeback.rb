@@ -35,7 +35,7 @@ def dump_args(**kwargs)
   #   '
   out = ""
   for (key, val) in kwargs.to_a()
-    out += 
+    out += "#{key}=#{val}, "
   end
   if is_bool(out)
     return (out[0...-2]) + ";"
@@ -50,14 +50,14 @@ def gen_report_base(appliance, obj_type, provider, rate_desc, rate_interval)
   #       :py:type:`str` rate_desc: The rate description as it appears in the report
   #       :py:type:`str` rate_interval: The rate interval, (Hourly/Daily/Weekly/Monthly)
   #   
-  title = 
+  title = "report_#{obj_type.downcase()}_#{rate_desc}"
   if obj_type == "Project"
     data = {"menu_name" => title, "title" => title, "base_report_on" => "Chargeback for Projects", "report_fields" => ["Archived", "Chargeback Rates", "Fixed Compute Metric", "Cpu Cores Used Cost", "Cpu Cores Used Metric", "Network I/O Used", "Network I/O Used Cost", "Fixed Compute Cost 1", "Fixed Compute Cost 2", "Memory Used", "Memory Used Cost", "Provider Name", "Fixed Total Cost", "Total Cost"], "filter" => {"filter_show_costs" => "Container Project", "filter_provider" => provider.name, "filter_project" => "All Container Projects"}}
   else
     if obj_type == "Image"
       data = {"base_report_on" => "Chargeback for Images", "report_fields" => ["Archived", "Chargeback Rates", "Fixed Compute Metric", "Cpu Cores Used Cost", "Cpu Cores Used Metric", "Network I/O Used", "Network I/O Used Cost", "Fixed Compute Cost 1", "Fixed Compute Cost 2", "Memory Used", "Memory Used Cost", "Provider Name", "Fixed Total Cost", "Total Cost"], "filter" => {"filter_show_costs" => "Container Image", "filter_provider" => provider.name}}
     else
-      raise Exception, 
+      raise Exception, "Unknown object type: #{obj_type}"
     end
   end
   data["menu_name"] = title
@@ -82,7 +82,7 @@ def gen_report_base(appliance, obj_type, provider, rate_desc, rate_interval)
     end
   end
   report = appliance.collections.reports.create(is_candu: true, None: data)
-  logger.info()
+  logger.info("QUEUING CUSTOM CHARGEBACK REPORT FOR CONTAINER #{obj_type.upcase()}")
   report.queue(wait_for_finish: true)
   return report
 end
@@ -101,7 +101,7 @@ def assign_custom_compute_rate(obj_type, chargeback_rate, provider)
       compute_assign = assignments.ComputeAssign(assign_to: "Selected Providers", selections: {provider.name => {"Rate" => chargeback_rate.description}})
       logger.info("ASSIGNING CUSTOM COMPUTE RATE FOR PROJECT CHARGEBACK")
     else
-      raise Exception, 
+      raise Exception, "Unknown object type: #{obj_type}"
     end
   end
   compute_assign.assign()
@@ -113,19 +113,19 @@ def compute_rate(appliance, rate_type, interval)
   description = fauxfactory.gen_alphanumeric(20, start: "custom_rate_")
   data = {"Used CPU Cores" => {"per_time" => interval, "fixed_rate" => 1, "variable_rate" => variable_rate}, "Fixed Compute Cost 1" => {"per_time" => interval, "fixed_rate" => 1}, "Fixed Compute Cost 2" => {"per_time" => interval, "fixed_rate" => 1}, "Used Memory" => {"per_time" => interval, "fixed_rate" => 1, "variable_rate" => variable_rate}, "Used Network I/O" => {"per_time" => interval, "fixed_rate" => 1, "variable_rate" => variable_rate}}
   ccb = appliance.collections.compute_rates.create(description, fields: data)
-  yield ccb
+  yield(ccb)
   if is_bool(ccb.exists)
     ccb.delete()
   end
 end
 def assign_compute_rate(obj_type, compute_rate, provider)
   assign_custom_compute_rate(obj_type, compute_rate, provider)
-  yield compute_rate
+  yield(compute_rate)
   assignments.ComputeAssign(assign_to: "<Nothing>").assign()
 end
 def chargeback_report_data(appliance, obj_type, interval, assign_compute_rate, provider)
   report = gen_report_base(appliance, obj_type, provider, assign_compute_rate.description, interval)
-  yield report.saved_reports.all()[0].data
+  yield(report.saved_reports.all()[0].data)
   report.delete()
 end
 def abstract_test_chargeback_cost(rate_key, obj_type, interval, chargeback_report_data, compute_rate, soft_assert)
@@ -164,7 +164,7 @@ def abstract_test_chargeback_cost(rate_key, obj_type, interval, chargeback_repor
     match_threshold = TEST_MATCH_ACCURACY * expected_cost
     soft_assert.((found_cost - expected_cost).abs <= match_threshold, "Unexpected Chargeback: {}".format(dump_args(charge_for: obj_type, rate_key: rate_key, metric: metric, num_hours: num_hours, num_intervals: num_intervals, fixed_rate: fixed_rate, variable_rate: variable_rate, fixed_cost: fixed_cost, variable_cost: variable_cost, expected_full_cost: expected_cost, found_full_cost: found_cost)))
   end
-  raise  unless found_something_to_test
+  raise "Could not find #{obj_type} with the assigned rate: #{compute_rate.description}" unless found_something_to_test
 end
 def test_chargeback_rate_fixed_1(rate_type, obj_type, interval, chargeback_report_data, compute_rate, soft_assert)
   # 

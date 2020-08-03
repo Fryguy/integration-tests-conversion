@@ -26,7 +26,7 @@ def setup_groups_buttons(appliance, provider)
     end
     gp_buttons[obj_type] = [gp, button, obj]
   end
-  yield gp_buttons
+  yield(gp_buttons)
   for button_group in gp_buttons.values()
     grp_,button_,_ = button_group
     button_.delete_if_exists()

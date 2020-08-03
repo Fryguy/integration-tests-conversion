@@ -51,12 +51,12 @@ def dialog(appliance, copy_instance, create_method)
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   element_data = {"element_information" => {"ele_label" => fauxfactory.gen_alphanumeric(start: "ele_"), "ele_name" => fauxfactory.gen_alphanumeric(), "ele_desc" => fauxfactory.gen_alphanumeric(), "choose_type" => "Dropdown"}, "options" => {"dynamic_chkbox" => true}}
   box.elements.create(element_data: [element_data])
-  yield sd
+  yield(sd)
 end
 def catalog(appliance)
   cat_name = fauxfactory.gen_alphanumeric(start: "cat_")
   catalog = appliance.collections.catalogs.create(name: cat_name, description: "my catalog")
-  yield catalog
+  yield(catalog)
 end
 def copy_domain(request, appliance)
   domain = DomainCollection(appliance).create(name: "new_domain", enabled: true)
@@ -330,7 +330,7 @@ def test_load_service_dialog(appliance, import_datastore, generic_catalog_item_w
   }
   (LogValidator(auto_log, failure_patterns: ["Service dialog load - Begin"])).waiting(timeout: 120) {
     view.submit_button.click()
-    description = 
+    description = "Provisioning Service [#{catalog_item.name}] from [#{catalog_item.name}]"
     provision_request = appliance.collections.requests.instantiate(description)
     provision_request.wait_for_request(method: "ui")
   }

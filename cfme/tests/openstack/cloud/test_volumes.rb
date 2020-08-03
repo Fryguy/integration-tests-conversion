@@ -17,7 +17,7 @@ def volume(appliance, provider)
   collection = appliance.collections.volumes
   az = (appliance.version < "5.11") ? nil : provider.data["provisioning"]["availability_zone"]
   volume = collection.create(name: fauxfactory.gen_alpha(start: "vol_"), from_manager: false, az: az, tenant: provider.data["provisioning"]["cloud_tenant"], volume_size: VOLUME_SIZE, provider: provider)
-  yield volume
+  yield(volume)
   begin
     if is_bool(volume.exists)
       volume.delete(wait: false)
@@ -36,7 +36,7 @@ def volume_with_type(appliance, provider)
   end
   collection = appliance.collections.volumes
   volume = collection.create(name: fauxfactory.gen_alpha(start: "vol_"), from_manager: false, az: az, tenant: provider.data["provisioning"]["cloud_tenant"], volume_type: volume_type.name, volume_size: VOLUME_SIZE, provider: provider)
-  yield volume
+  yield(volume)
   if is_bool(volume.exists)
     volume.delete(wait: false)
   end
@@ -48,7 +48,7 @@ def new_instance(provider)
   instance_name = fauxfactory.gen_alpha(15, start: "test_vol_")
   collection = provider.appliance.provider_based_collection(provider)
   instance = collection.create_rest(instance_name, provider)
-  yield instance
+  yield(instance)
   instance.cleanup_on_provider()
 end
 def test_create_volume(volume, provider)
@@ -59,7 +59,7 @@ def test_create_volume(volume, provider)
   #       initialEstimate: 1/4h
   #   
   raise unless volume.exists
-  raise unless volume.size == 
+  raise unless volume.size == "#{VOLUME_SIZE} GB"
   raise unless volume.tenant == provider.data["provisioning"]["cloud_tenant"]
 end
 def test_edit_volume(volume, appliance)
@@ -94,7 +94,7 @@ def test_create_volume_with_type(volume_with_type, provider)
   #       initialEstimate: 1/4h
   #   
   raise unless volume_with_type.exists
-  raise unless volume_with_type.size == 
+  raise unless volume_with_type.size == "#{VOLUME_SIZE} GB"
   raise unless volume_with_type.tenant == provider.data["provisioning"]["cloud_tenant"]
 end
 def test_edit_volume_with_type(volume_with_type, appliance)

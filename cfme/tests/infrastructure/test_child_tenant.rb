@@ -26,16 +26,16 @@ def prov_data(vm_name, provisioning)
 end
 def set_child_tenant_quota(request, appliance, new_child)
   field,value = request.param
-  new_child.set_quota(None: { => true, "field" => value})
+  new_child.set_quota(None: {"#{field}_cb" => true, "field" => value})
   yield
   appliance.server.login_admin()
   appliance.server.browser.refresh()
-  new_child.set_quota(None: { => false})
+  new_child.set_quota(None: {"#{field}_cb" => false})
 end
 def new_tenant(appliance)
   collection = appliance.collections.tenants
   tenant = collection.create(name: fauxfactory.gen_alphanumeric(15, start: "tenant_"), description: fauxfactory.gen_alphanumeric(15, start: "tenant_desc_"), parent: collection.get_root_tenant())
-  yield tenant
+  yield(tenant)
   if is_bool(tenant.exists)
     tenant.delete()
   end
@@ -43,15 +43,15 @@ end
 def new_child(appliance, new_tenant)
   collection = appliance.collections.tenants
   child_tenant = collection.create(name: fauxfactory.gen_alphanumeric(15, start: "tenant_"), description: fauxfactory.gen_alphanumeric(15, start: "tenant_desc_"), parent: new_tenant)
-  yield child_tenant
+  yield(child_tenant)
   if is_bool(child_tenant.exists)
     child_tenant.delete()
   end
 end
 def new_group(appliance, new_child, new_tenant)
   collection = appliance.collections.groups
-  group = collection.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: "EvmRole-administrator", tenant: )
-  yield group
+  group = collection.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: "EvmRole-administrator", tenant: "My Company/#{new_tenant.name}/#{new_child.name}")
+  yield(group)
   if is_bool(group.exists)
     group.delete()
   end
@@ -59,7 +59,7 @@ end
 def new_user(appliance, new_group, new_credential)
   collection = appliance.collections.users
   user = collection.create(name: fauxfactory.gen_alphanumeric(start: "user_"), credential: new_credential, email: fauxfactory.gen_email(), groups: new_group, cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   if is_bool(user.exists)
     user.delete()
   end

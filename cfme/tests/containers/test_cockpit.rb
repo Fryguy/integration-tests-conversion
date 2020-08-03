@@ -36,7 +36,7 @@ def test_cockpit_button_access(appliance, provider, cockpit, request)
   collection = appliance.collections.container_nodes
   nodes = collection.all()
   for node in nodes
-    view = is_bool(node) ? navigate_to(node, "Details", force: true) : pytest.skip()
+    view = is_bool(node) ? navigate_to(node, "Details", force: true) : pytest.skip("Could not determine node of #{provider.name}")
     if is_bool(cockpit)
       raise unless !view.toolbar.web_console.disabled
       view.toolbar.web_console.click()

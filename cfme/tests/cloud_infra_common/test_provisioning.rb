@@ -59,7 +59,7 @@ def instance_args(request, provider, provisioning, vm_name)
   if is_bool(auto)
     inst_args.update({"environment" => {"automatic_placement" => auto}})
   end
-  yield [vm_name, inst_args]
+  yield([vm_name, inst_args])
 end
 def provisioned_instance(provider, instance_args, appliance)
   #  Checks provisioning status for instance 
@@ -69,7 +69,7 @@ def provisioned_instance(provider, instance_args, appliance)
   if is_bool(!instance)
     raise Exception, "instance returned by collection.create is 'None'"
   end
-  yield instance
+  yield(instance)
   logger.info("Instance cleanup, deleting %s", instance.name)
   begin
     instance.cleanup_on_provider()
@@ -108,16 +108,16 @@ def test_gce_preemptible_provision(appliance, provider, instance_args, soft_asse
   soft_assert.(instance.exists_on_provider, "Instance wasn't provisioned successfully")
 end
 def _post_approval(smtp_test, provision_request, vm_type, requester, provider, approved_vm_names)
-  approved_subject = normalize_text()
-  approved_from = normalize_text()
-  wait_for_messages_with_subjects(smtp_test, , num_sec: 90)
+  approved_subject = normalize_text("your #{vm_type} request was approved")
+  approved_from = normalize_text("#{vm_type} request from #{requester}was approved")
+  wait_for_messages_with_subjects(smtp_test, Set.new([approved_subject, approved_from]), num_sec: 90)
   smtp_test.clear_database()
   logger.info("Waiting for vms %s to appear on provider %s", approved_vm_names.join(", "), provider.key)
   wait_for(lambda{|| approved_vm_names.map{|_| provider.mgmt.does_vm_exist(_)}.is_all?}, handle_exception: true, num_sec: 600)
   provision_request.wait_for_request(method: "ui")
-  msg = 
+  msg = "Provisioning failed with the message #{provision_request.row.last_message.text}."
   raise msg unless provision_request.is_succeeded(method: "ui")
-  completed_subjects = 
+  completed_subjects = approved_vm_names.map{|name| normalize_text("your #{vm_type} request has completed vm name #{name}")}.to_set
   wait_for_messages_with_subjects(smtp_test, completed_subjects, num_sec: 90)
 end
 def wait_for_messages_with_subjects(smtp_test, expected_subjects_substrings, num_sec)
@@ -126,7 +126,7 @@ def wait_for_messages_with_subjects(smtp_test, expected_subjects_substrings, num
   #   
   expected_subjects_substrings = Set.new(expected_subjects_substrings)
   _check_subjects = lambda do
-    subjects = 
+    subjects = smtp_test.get_emails().map{|m| normalize_text(m["subject"])}.to_set
     found_subjects_substrings = Set.new()
     for expected_substring in expected_subjects_substrings
       __dummy0__ = false
@@ -201,14 +201,14 @@ def test_provision_approval(appliance, provider, vm_name, smtp_test, request, ac
   collection = appliance.provider_based_collection(provider)
   inst_args = {"catalog" => {"vm_name" => vm_name, "num_vms" => "2"}}
   vm = collection.create(vm_name, provider, form_values: inst_args, wait: false)
-  pending_subject = normalize_text()
-  pending_from = normalize_text()
-  wait_for_messages_with_subjects(smtp_test, , num_sec: 90)
+  pending_subject = normalize_text("your #{vm_type} request is pending")
+  pending_from = normalize_text("#{vm_type} request from #{requester}pending approval")
+  wait_for_messages_with_subjects(smtp_test, Set.new([pending_subject, pending_from]), num_sec: 90)
   smtp_test.clear_database()
-  cells = {"Description" => }
+  cells = {"Description" => "Provision from [#{vm.template_name}] to [#{vm.name}###]"}
   _action_edit = lambda do
-    new_vm_name = 
-    modifications = {"catalog" => {"num_vms" => "1", "vm_name" => new_vm_name}, "Description" => }
+    new_vm_name = "#{vm_name}-xx"
+    modifications = {"catalog" => {"num_vms" => "1", "vm_name" => new_vm_name}, "Description" => "Provision from [#{vm.template_name}] to [#{new_vm_name}]"}
     provision_request = appliance.collections.requests.instantiate(cells: cells)
     provision_request.edit_request(values: modifications)
     vm_names = [new_vm_name]
@@ -226,13 +226,13 @@ def test_provision_approval(appliance, provider, vm_name, smtp_test, request, ac
   _action_deny = lambda do
     provision_request = appliance.collections.requests.instantiate(cells: cells)
     provision_request.deny_request(method: "ui", reason: "You stink!")
-    denied_subject = normalize_text()
-    denied_from = normalize_text()
+    denied_subject = normalize_text("your #{vm_type} request was denied")
+    denied_from = normalize_text("#{vm_type} request from #{requester}was denied")
     wait_for_messages_with_subjects(smtp_test, [denied_subject, denied_from], num_sec: 90)
   end
-  action_callable = locals().get()
+  action_callable = locals().get("_action_#{action}")
   if is_bool(!action_callable)
-    raise NotImplementedError, 
+    raise NotImplementedError, "Action #{action} is not known to this test."
   end
   action_callable.()
 end
@@ -255,7 +255,7 @@ def test_provision_from_template_using_rest(appliance, request, provider, vm_nam
   end
   collection = appliance.provider_based_collection(provider)
   instance = collection.create_rest(vm_name, provider, form_values: form_values)
-  wait_for(lambda{|| instance.exists}, num_sec: 1000, delay: 5, message: )
+  wait_for(lambda{|| instance.exists}, num_sec: 1000, delay: 5, message: "VM #{vm_name} becomes visible")
   _cleanup = lambda do
     logger.info("Instance cleanup, deleting %s", instance.name)
     begin
@@ -410,7 +410,7 @@ def test_provision_with_boot_volume(request, instance_args, provider, soft_asser
     instance.cleanup_on_provider()
     wait_for(lambda{|| !instance.exists_on_provider}, num_sec: 180, delay: 5)
   end
-  request_description = 
+  request_description = "Provision from [#{image}] to [#{instance.name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
   msg = "Provisioning failed with the message {}".format(provision_request.row.last_message.text)
@@ -474,12 +474,12 @@ def test_provision_with_additional_volume(request, instance_args, provider, smal
   end
   instance = appliance.collections.cloud_instances.create(method(:vm_name), provider, form_values: inst_args)
   request.addfinalizer(method(:cleanup_and_wait_for_instance_gone))
-  request_description = 
+  request_description = "Provision from [#{small_template.name}] to [#{instance.name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   begin
     provision_request.wait_for_request(method: "ui")
   rescue Exception => e
-    logger.info()
+    logger.info("Provision failed #{e}: #{provision_request.request_state}")
     raise
   end
   raise "Provisioning failed with the message {}".format(provision_request.row.last_message.text) unless provision_request.is_succeeded(method: "ui")
@@ -509,7 +509,7 @@ def test_provision_with_tag(appliance, vm_name, tag, provider, request)
   #       casecomponent: Tagging
   #       initialEstimate: 1/4h
   #   
-  inst_args = {"purpose" => {"apply_tags" => Check_tree.CheckNode([, tag.display_name])}}
+  inst_args = {"purpose" => {"apply_tags" => Check_tree.CheckNode(["#{tag.category.display_name} *", tag.display_name])}}
   collection = appliance.provider_based_collection(provider)
   instance = collection.create(vm_name, provider, form_values: inst_args)
   request.addfinalizer(instance.cleanup_on_provider)

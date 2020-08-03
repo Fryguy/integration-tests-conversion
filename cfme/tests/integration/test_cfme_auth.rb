@@ -64,7 +64,7 @@ def user_obj(temp_appliance_preconfig_long, auth_user, user_type)
   # return a simple user object, see if it exists and delete it on teardown
   username = (user_type == "upn") ? auth_user.username.gsub(" ", "-") : auth_user.username
   user = temp_appliance_preconfig_long.collections.users.simple_user(username, credentials[auth_user.password].password, fullname: auth_user.fullname || auth_user.username)
-  yield user
+  yield(user)
   temp_appliance_preconfig_long.browser.widgetastic.refresh()
   temp_appliance_preconfig_long.server.login_admin()
   if is_bool(user.exists)
@@ -73,9 +73,9 @@ def user_obj(temp_appliance_preconfig_long, auth_user, user_type)
 end
 def log_monitor(user_obj, temp_appliance_preconfig_long)
   # Search evm.log for any plaintext password
-  result = LogValidator("/var/www/miq/vmdb/log/evm.log", failure_patterns: [], hostname: temp_appliance_preconfig_long.hostname)
+  result = LogValidator("/var/www/miq/vmdb/log/evm.log", failure_patterns: ["#{user_obj.credential.secret}"], hostname: temp_appliance_preconfig_long.hostname)
   result.start_monitoring()
-  yield result
+  yield(result)
 end
 def test_login_evm_group(temp_appliance_preconfig_long, auth_user, user_obj, soft_assert, log_monitor)
   # This test checks whether a user can login while assigned a default EVM group
@@ -93,14 +93,14 @@ def test_login_evm_group(temp_appliance_preconfig_long, auth_user, user_obj, sof
   user_obj {
     logger.info("Logging in as user %s, member of groups %s", user_obj, evm_group_names)
     view = navigate_to(temp_appliance_preconfig_long.server, "LoggedIn")
-    raise  unless view.is_displayed
-    soft_assert.(user_obj.name == view.current_fullname, )
+    raise "user #{user_obj} failed login" unless view.is_displayed
+    soft_assert.(user_obj.name == view.current_fullname, "user #{user_obj} is not in view fullname")
     for name in evm_group_names
-      soft_assert.(view.group_names.include?(name), )
+      soft_assert.(view.group_names.include?(name), "user #{user_obj} evm group #{name} not in view group_names")
     end
   }
   temp_appliance_preconfig_long.server.login_admin()
-  raise  unless user_obj.exists
+  raise "user record should have been created for \"#{user_obj}\"" unless user_obj.exists
   raise unless log_monitor.validate()
 end
 def retrieve_group(temp_appliance_preconfig_long, auth_mode, username, groupname, auth_provider, tenant: nil)
@@ -145,7 +145,7 @@ def test_login_retrieve_group(temp_appliance_preconfig_long, request, log_monito
     soft_assert.(view.group_names.include?(group.description), "user group \"{}\" not displayed in UI groups list \"{}\"".format(group.description, view.group_names))
   }
   temp_appliance_preconfig_long.server.login_admin()
-  raise  unless user_obj.exists
+  raise "User record for \"#{user_obj}\" should exist after login" unless user_obj.exists
   raise unless log_monitor.validate()
   _cleanup = lambda do
     if is_bool(user_obj.exists)
@@ -164,7 +164,7 @@ def format_user_principal(username, user_type, auth_provider)
     if ["uid", "cn"].include?(user_type)
       return "{}={},{}".format(user_type, username, auth_provider.user_types[user_type].user_suffix)
     else
-      pytest.skip()
+      pytest.skip("No user formatting for #{auth_provider} and user type #{user_type}")
     end
   end
 end
@@ -173,14 +173,14 @@ def local_group(temp_appliance_preconfig_long)
   group_name = gen_alphanumeric(length: 15, start: "test-group-")
   group = temp_appliance_preconfig_long.collections.groups.create(description: group_name, role: "EvmRole-desktop")
   raise unless group.exists
-  yield group
+  yield(group)
   if is_bool(group.exists)
     group.delete()
   end
 end
 def local_user(temp_appliance_preconfig_long, auth_user, user_type, auth_provider, local_group)
   user = temp_appliance_preconfig_long.collections.users.create(name: auth_user.fullname || auth_user.username, credential: Credential(principal: format_user_principal(auth_user.username, user_type, auth_provider), secret: credentials[auth_user.password].password), groups: [local_group])
-  yield user
+  yield(user)
   if is_bool(user.exists)
     user.delete()
   end
@@ -222,7 +222,7 @@ def test_user_group_switching(temp_appliance_preconfig_long, auth_user, auth_mod
   __dummy0__ = false
   for group in auth_user.groups
     if !group.downcase().include?("evmgroup")
-      logger.info()
+      logger.info("Retrieving a user group that is non evm built-in: #{group}")
       retrieved_groups.push(retrieve_group(temp_appliance_preconfig_long, auth_mode, auth_user.username, group, auth_provider, tenant: "My Company"))
     end
     if group == auth_user.groups[-1]
@@ -248,7 +248,7 @@ def test_user_group_switching(temp_appliance_preconfig_long, auth_user, auth_mod
     end
   }
   temp_appliance_preconfig_long.server.login_admin()
-  raise  unless user_obj.exists
+  raise "User record for \"#{auth_user}\" should exist after login" unless user_obj.exists
   raise unless log_monitor.validate()
   _cleanup = lambda do
     for group in retrieved_groups

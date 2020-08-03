@@ -19,7 +19,7 @@ def vm_obj(provider, setup_provider_modscope, small_template_modscope)
   vm_name = random_vm_name("attrs")
   collection = provider.appliance.provider_based_collection(provider)
   new_vm = collection.instantiate(vm_name, provider, template_name: small_template_modscope.name)
-  yield new_vm
+  yield(new_vm)
   new_vm.cleanup_on_provider()
 end
 def get_provider(appliance, provider, setup_provider_modscope)
@@ -43,16 +43,16 @@ def get_vm(appliance, provider, vm_obj)
 end
 def get_service(appliance)
   uid = fauxfactory.gen_alphanumeric(5)
-  name = 
+  name = "test_rest_service_#{uid}"
   _get_service = lambda do
     service = appliance.rest_api.collections.services.find_by(name: name)
     if is_bool(!service)
-      body = {"name" => name, "description" => }
+      body = {"name" => name, "description" => "Test REST Service #{uid}"}
       service = appliance.rest_api.collections.services.action.create(body)
     end
     return service[0]
   end
-  yield _get_service
+  yield(_get_service)
   begin
     service = appliance.rest_api.collections.services.get(name: name)
     service.delete()
@@ -68,7 +68,7 @@ def add_custom_attributes(request, resource, num: 2)
   body = []
   for __ in num.times
     uid = fauxfactory.gen_alphanumeric(5)
-    body.push({"name" => , "value" => })
+    body.push({"name" => "ca_name_#{uid}", "value" => "ca_value_#{uid}"})
   end
   attrs = resource.custom_attributes.action.add(*body)
   _delete = lambda do
@@ -191,7 +191,7 @@ class TestCustomAttributesRESTAPI
     body = []
     for __ in response_len.times
       uid = fauxfactory.gen_alphanumeric(5)
-      body.push({"name" => , "value" => , "section" => "metadata"})
+      body.push({"name" => "ca_name_#{uid}", "value" => "ca_value_#{uid}", "section" => "metadata"})
     end
     if is_bool(from_detail)
       edited = []
@@ -265,7 +265,7 @@ class TestCustomAttributesRESTAPI
     resource = get_resource[collection_name]()
     add_custom_attributes(request, resource)
     uid = fauxfactory.gen_alphanumeric(5)
-    body = {"name" => , "value" => , "section" => "bad_section"}
+    body = {"name" => "ca_name_#{uid}", "value" => "ca_value_#{uid}", "section" => "bad_section"}
     pytest.raises(Exception, match: "Api::BadRequestError") {
       resource.custom_attributes.action.add(body)
     }

@@ -38,7 +38,7 @@ def template(request, appliance, provider, vm)
     rescue MultipleItemsError
       logger.error("Failed to delete template. Multiple templates found with name {}".format(template.name))
     rescue Exception => e
-      logger.error()
+      logger.error("Failed to delete template. #{e}")
     end
   end
   return template

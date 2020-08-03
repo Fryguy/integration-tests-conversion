@@ -52,7 +52,7 @@ def secondary_dns(temp_appliance_preconfig_long)
 end
 def freeipa_provider()
   auth_prov = authutil.get_auth_crud("freeipa03")
-  yield auth_prov
+  yield(auth_prov)
 end
 def test_appliance_console(appliance)
   # 'ap | tee /tmp/opt.txt)' saves stdout to file, 'ap' launch appliance_console.
@@ -279,7 +279,7 @@ def test_appliance_console_ha_crud(unconfigured_appliances, app_creds)
   }
   LogValidator(evm_log, matched_patterns: ["Starting to execute failover"], hostname: apps[2].hostname).waiting(timeout: 450) {
     result = apps[0].ssh_client.run_command("systemctl stop $APPLIANCE_PG_SERVICE", timeout: 15)
-    raise  unless result.success
+    raise "Failed to stop APPLIANCE_PG_SERVICE: #{result.output}" unless result.success
   }
   apps[2].evmserverd.wait_for_running()
   apps[2].wait_for_web_ui()
@@ -404,12 +404,12 @@ def test_appliance_console_external_auth(auth_type, ipa_crud, configured_applian
   #       casecomponent: Auth
   #       initialEstimate: 1/4h
   #   
-  evm_tail = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [], hostname: configured_appliance.hostname)
+  evm_tail = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [".*#{auth_type.option} to true.*"], hostname: configured_appliance.hostname)
   evm_tail.start_monitoring()
   command_set = ["ap", RETURN, app_con_menu["update_ext_auth_opt"], auth_type.index, "5", RETURN, RETURN]
   configured_appliance.appliance_console.run_commands(command_set, timeout: 30)
   raise unless evm_tail.validate(wait: "30s")
-  evm_tail = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [], hostname: configured_appliance.hostname)
+  evm_tail = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [".*#{auth_type.option} to false.*"], hostname: configured_appliance.hostname)
   evm_tail.start_monitoring()
   command_set = ["ap", RETURN, app_con_menu["update_ext_auth_opt"], auth_type.index, "5", RETURN, RETURN]
   configured_appliance.appliance_console.run_commands(command_set, timeout: 30)
@@ -825,7 +825,7 @@ def test_appliance_console_cancel(appliance)
   for menu_number in 1.upto(20-1)
     command_set = ["ap", RETURN, menu_number.to_s, CTRL_C]
     result = appliance.appliance_console.run_commands(command_set, timeout: 30)
-    raise  unless result[0].include?("Welcome to the CFME Virtual Appliance")
+    raise "Unable to go back from #{menu_number} menu number." unless result[0].include?("Welcome to the CFME Virtual Appliance")
   end
 end
 def test_appliance_console_network_conf(temp_appliance_preconfig_long, soft_assert)
@@ -887,18 +887,18 @@ def test_appliance_console_network_conf(temp_appliance_preconfig_long, soft_asse
   ip_a_output = ip_a_ret.output.split_p("
 ")
   logger.info("\"ip a\" command output:%s", ip_a_output)
-  soft_assert.(re.search(, new_result[0]), )
-  soft_assert.(ip_a_output.select{|line| line.include?(ipv4) && !line.include?("dynamic")}.map{|line| true}, )
-  soft_assert.(re.search(, new_result[0]), )
-  soft_assert.(ip_a_output.select{|line| line.include?(ipv6) && !line.include?("dynamic")}.map{|line| true}, )
+  soft_assert.(re.search("IPv4 Address: +#{ipv4}", new_result[0]), "New #{ipv4} IPV4 is not found on console appliance ")
+  soft_assert.(ip_a_output.select{|line| line.include?(ipv4) && !line.include?("dynamic")}.map{|line| true}, "New #{ipv4} IPV4 Changes are not reflected in \"ip a\" output.")
+  soft_assert.(re.search("IPv6 Address: +#{ipv6}", new_result[0]), "New #{ipv6} IPV6 is not found on console appliance")
+  soft_assert.(ip_a_output.select{|line| line.include?(ipv6) && !line.include?("dynamic")}.map{|line| true}, "New #{ipv6} IPV6 Changes are not reflected in \"ip a\" output")
   soft_assert.(new_result[0].split_p("
-").select{|line| line.include?(hostname)}.map{|line| true}, )
+").select{|line| line.include?(hostname)}.map{|line| true}, "New #{hostname} hostname is not found on console appliance")
   command_set = [TimedCommand("ap", 30), RETURN, app_con_menu["config_net"], "4", hostname]
   out = appliance.appliance_console.run_commands(command_set, timeout: 15)
-  soft_assert.(out[-1].include?("Success!"), )
+  soft_assert.(out[-1].include?("Success!"), "Unable to verify #{hostname} Hostname")
   command_set = [TimedCommand("ap", 30), RETURN, app_con_menu["config_net"], "4", ipv4]
   out = appliance.appliance_console.run_commands(command_set, timeout: 15)
-  soft_assert.(out[-1].include?("Success!"), )
+  soft_assert.(out[-1].include?("Success!"), "Unable to verify #{ipv4} ipv4 ip")
 end
 def test_appliance_console_network_conf_negative(temp_appliance_preconfig_modscope)
   # 
@@ -1076,8 +1076,8 @@ def test_appliance_console_static_ip_negative(temp_appliance_preconfig_modscope)
   logger.info("\"ap\" command output after test:%s" % result)
   first_console_screen = result[0].split_p("
 ")
-  raise  unless first_console_screen.select{|i| i.include?("IPv4 Address:") && i.include?(original_ipv4)}.map{|i| i} != []
-  raise  unless first_console_screen.select{|i| i.include?("IPv6 Address:") && i.include?(original_ipv6)}.map{|i| i} != []
+  raise "old #{original_ipv4} IPV4 is not found on console appliance " unless first_console_screen.select{|i| i.include?("IPv4 Address:") && i.include?(original_ipv4)}.map{|i| i} != []
+  raise "old #{original_ipv6} IPV6 is not found on console appliance" unless first_console_screen.select{|i| i.include?("IPv6 Address:") && i.include?(original_ipv6)}.map{|i| i} != []
 end
 def test_appliance_console_ha_dc_failover()
   # 
@@ -1421,10 +1421,10 @@ def test_appliance_overwrite_ssl_ipa(unconfigured_appliance, freeipa_provider)
   result = appliance.ssh_client.run_command(server_cer_key_cmd)
   raise unless result.success
   server_cer_key_op = result.output
-  command = 
+  command = "appliance_console_cli --region=1 --internal --username=#{credentials["database"]["username"]} --password=#{credentials["database"]["password"]} --key --dbdisk=/dev/vdb"
   result = appliance.ssh_client.run_command(command)
   raise unless result.success
-  command = 
+  command = "appliance_console_cli --ipaserver=#{freeipa_provider.host1} --ipaprincipal=#{freeipa_provider.ipaprincipal} --ipapassword=#{freeipa_provider.bind_password}"
   result = appliance.ssh_client.run_command(command)
   raise unless result.success
   command = "appliance_console_cli --ca=ipa --http-cert"

@@ -57,13 +57,13 @@ def wait_for_requests(requests)
   end
   wait_for(method(:_finished), num_sec: 45, delay: 5, message: "requests finished")
 end
-COLLECTIONS_ALL = 
-COLLECTIONS_NOT_IN_510 = 
-COLLECTIONS_NOT_IN_511 = 
+COLLECTIONS_ALL = Set.new(["actions", "alert_definition_profiles", "alert_definitions", "alerts", "authentications", "automate", "automate_domains", "automate_workspaces", "automation_requests", "availability_zones", "categories", "chargebacks", "cloud_networks", "cloud_object_store_containers", "cloud_subnets", "cloud_templates", "cloud_tenants", "cloud_volume_types", "cloud_volumes", "clusters", "conditions", "configuration_script_payloads", "configuration_script_sources", "configuration_scripts", "container_deployments", "container_groups", "container_images", "container_nodes", "container_projects", "container_templates", "container_volumes", "containers", "conversion_hosts", "currencies", "custom_button_sets", "custom_buttons", "customization_scripts", "customization_templates", "data_stores", "enterprises", "event_streams", "events", "features", "firmwares", "flavors", "floating_ips", "generic_object_definitions", "generic_objects", "groups", "guest_devices", "hosts", "instances", "lans", "load_balancers", "measures", "metric_rollups", "network_routers", "notifications", "orchestration_stacks", "orchestration_templates", "physical_chassis", "physical_racks", "physical_servers", "physical_storages", "physical_switches", "pictures", "policies", "policy_actions", "policy_profiles", "providers", "provision_dialogs", "provision_requests", "pxe_images", "pxe_servers", "rates", "regions", "reports", "request_tasks", "requests", "resource_pools", "results", "roles", "search_filters", "security_groups", "servers", "service_catalogs", "service_dialogs", "service_offerings", "service_orders", "service_parameters_sets", "service_requests", "service_templates", "services", "settings", "switches", "tags", "tasks", "templates", "tenants", "transformation_mappings", "users", "vms", "zones"])
+COLLECTIONS_NOT_IN_510 = Set.new(["customization_templates", "pxe_images", "pxe_servers"])
+COLLECTIONS_NOT_IN_511 = Set.new(["container_deployments", "load_balancers"])
 COLLECTIONS_IN_510 = COLLECTIONS_ALL - COLLECTIONS_NOT_IN_510
 COLLECTIONS_IN_511 = COLLECTIONS_ALL - COLLECTIONS_NOT_IN_511
 COLLECTIONS_IN_UPSTREAM = COLLECTIONS_IN_510
-COLLECTIONS_OMITTED = 
+COLLECTIONS_OMITTED = Set.new(["automate_workspaces", "metric_rollups", "settings"])
 UNCOLLECT_REASON = "Collection type not valid for appliance version"
 def _collection_not_in_this_version(appliance, collection_name)
   return !COLLECTIONS_IN_UPSTREAM.include?(collection_name) && appliance.version.is_in_series("upstream") || !COLLECTIONS_IN_511.include?(collection_name) && appliance.version.is_in_series("5.11") || !COLLECTIONS_IN_510.include?(collection_name) && appliance.version.is_in_series("5.10")
@@ -440,7 +440,7 @@ def test_rest_paging(appliance, paging)
   #       initialEstimate: 1/4h
   #   
   limit,offset = paging
-  url_string = "{}{}".format(appliance.rest_api.collections.features._href, )
+  url_string = "{}{}".format(appliance.rest_api.collections.features._href, "?limit=#{limit}&offset=#{offset}")
   if limit == 0
     pytest.raises(Exception, match: "Api::BadRequestError") {
       appliance.rest_api.get(url_string)
@@ -463,17 +463,17 @@ def test_rest_paging(appliance, paging)
   expected_pages_num = (response["count"] / limit) + (is_bool(response["count"] % limit) ? 1 : 0)
   raise unless response["pages"] == expected_pages_num
   links = response["links"]
-  raise unless links["self"].include?()
+  raise unless links["self"].include?("limit=#{limit}&offset=#{offset}")
   if offset + limit < response["count"]
     raise unless links["next"].include?("limit={}&offset={}".format(limit, offset + limit))
   end
   if offset > 0
     expected_previous_offset = (offset > limit) ? offset - limit : 0
-    raise unless links["previous"].include?()
+    raise unless links["previous"].include?("limit=#{limit}&offset=#{expected_previous_offset}")
   end
   raise unless links["first"].include?("limit={}&offset={}".format(limit, 0))
   expected_last_offset = (response["pages"] - (is_bool(response["count"] % limit) ? 1 : 0)) * limit
-  raise unless links["last"].include?()
+  raise unless links["last"].include?("limit=#{limit}&offset=#{expected_last_offset}")
 end
 def test_attributes_present(appliance, collection_name)
   # Tests that the expected attributes are present in all collections.
@@ -519,7 +519,7 @@ def test_collection_class_valid(appliance, provider, vendor)
   collection = appliance.rest_api.collections.vms
   collection.reload()
   resource_type = collection[0].type
-  tested_type = 
+  tested_type = "ManageIQ::Providers::#{vendor}::InfraManager::Vm"
   response = collection.query_string(collection_class: tested_type)
   if resource_type == tested_type
     raise unless response.count > 0
@@ -593,7 +593,7 @@ def test_rest_ping(appliance)
   #       caseimportance: medium
   #       initialEstimate: 1/4h
   #   
-  ping_addr = 
+  ping_addr = "#{appliance.rest_api._entry_point}/ping"
   raise unless appliance.rest_api._session.get(ping_addr).text == "pong"
 end
 class TestPicturesRESTAPI
@@ -902,7 +902,7 @@ class TestEventStreamsRESTAPI
       begin
         evt_col.get(id: (found_evts[-1]).id)
       rescue [IndexError, TypeError]
-        soft_assert.(false, )
+        soft_assert.(false, "Couldn't get event #{evt} for vm #{vm_name}")
       end
     end
   end
@@ -992,7 +992,7 @@ def test_custom_logos_via_api(appliance, image_type, request)
   _finalize = lambda do
     appliance.server.upload_custom_logo(file_type: image_type, enable: false)
   end
-  href = 
+  href = "https://#{appliance.hostname}/api/product_info"
   api = appliance.rest_api
   wait_for(lambda{|| api.product_info != api.get(href)}, delay: 5, timeout: 100)
   branding_info = api.get(href)["branding_info"]

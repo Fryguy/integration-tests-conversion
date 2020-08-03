@@ -41,14 +41,14 @@ def test_idle(appliance, request, scenario)
     .monitor_thread.join
     add_workload_quantifiers(quantifiers, scenario_data)
     timediff = time.time() - starttime
-    logger.info()
+    logger.info("Finished cleaning up monitoring thread in #{timediff}")
   end
   request.addfinalizer(lambda{|| cleanup_workload.call(from_ts, quantifiers, scenario_data)})
   monitor_thread.start()
   appliance.wait_for_miq_server_workers_started(poll_interval: 2)
   appliance.update_server_roles(scenario["roles"].map{|role|[role, true]}.to_h)
   s_time = scenario["total_time"]
-  logger.info()
+  logger.info("Idling appliance for #{s_time}s")
   time.sleep(s_time)
   quantifiers["Elapsed_Time"] = s_time
   logger.info("Test Ending...")

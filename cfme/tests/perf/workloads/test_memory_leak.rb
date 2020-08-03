@@ -49,7 +49,7 @@ def test_workload_memory_leak(request, scenario, appliance, provider)
     .monitor_thread.join
     add_workload_quantifiers(quantifiers, scenario_data)
     timediff = time.time() - starttime
-    logger.info()
+    logger.info("Finished cleaning up monitoring thread in #{timediff}")
   end
   request.addfinalizer(lambda{|| cleanup_workload.call(scenario, from_ts, quantifiers, scenario_data)})
   monitor_thread.start()

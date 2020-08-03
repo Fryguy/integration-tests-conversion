@@ -103,7 +103,11 @@ def test_miq_password_decrypt(appliance, klass)
   #   Bugzilla:
   #       1720432
   #   
-  script = 
+  script = "require \"manageiq-password\"
+root_password = #{appliance.password_gem}.encrypt(\"abc\")
+$evm.log(\"info\", \"Root Password is #{root_password}\")
+root_password_decrypted = #{appliance.password_gem}.decrypt(root_password)
+$evm.log(\"info\", \"Decrypted password is #{root_password_decrypted}\")"
   klass.schema.add_fields({"name" => "execute", "type" => "Method", "data_type" => "String"})
   method = klass.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: script)
   instance = klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"execute" => {"value" => method.name}})
@@ -152,9 +156,9 @@ def test_service_retirement_from_automate_method(request, generic_catalog_item, 
         ")
   instance = custom_instance.(ruby_code: script)
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Create request for create_retire_request.*"])).waiting(timeout: 120) {
-    simulate(appliance: generic_catalog_item.appliance, target_type: "Service", target_object: , message: "create", request: , execute_methods: true)
+    simulate(appliance: generic_catalog_item.appliance, target_type: "Service", target_object: "#{generic_catalog_item.name}", message: "create", request: "#{instance.name}", execute_methods: true)
   }
-  retire_request = generic_catalog_item.appliance.rest_api.collections.requests.get(description: )
+  retire_request = generic_catalog_item.appliance.rest_api.collections.requests.get(description: "Service Retire for: #{generic_catalog_item.name}")
   wait_for(lambda{|| retire_request.request_state == "finished"}, fail_func: retire_request.reload, timeout: 180, delay: 10)
 end
 def set_root_tenant_quota(request, appliance)
@@ -162,7 +166,7 @@ def set_root_tenant_quota(request, appliance)
   root_tenant = appliance.collections.tenants.get_root_tenant()
   view = navigate_to(root_tenant, "ManageQuotas")
   reset_data = view.form.read()
-  root_tenant.set_quota(None: { => true, "field" => value})
+  root_tenant.set_quota(None: {"#{field}_cb" => true, "field" => value})
   yield
   root_tenant.set_quota(None: reset_data)
 end
@@ -191,16 +195,16 @@ def test_automate_quota_units(setup_provider, provider, request, appliance, set_
   end
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*Getting Tenant Quota Values for:.*.memory=>1073741824000.*"])).waiting(timeout: 120) {
     do_vm_provisioning(appliance, template_name: provisioning["template"], provider: provider, vm_name: vm_name, provisioning_data: prov_data, wait: false, request: nil)
-    request_description = 
+    request_description = "Provision from [#{provisioning["template"]}] to [#{vm_name}]"
     provision_request = appliance.collections.requests.instantiate(request_description)
     provision_request.wait_for_request(method: "ui")
-    raise  unless provision_request.is_succeeded(method: "ui")
+    raise "Provisioning failed: #{provision_request.row.last_message.text}" unless provision_request.is_succeeded(method: "ui")
   }
 end
 def vm_folder(provider)
   # Create Vm folder on VMWare provider
   folder = provider.mgmt.create_folder(fauxfactory.gen_alphanumeric(start: "test_folder_", length: 20))
-  yield folder
+  yield(folder)
   fd = folder.Destroy()
   wait_for(lambda{|| fd.info.state == "success"}, delay: 10, timeout: 150)
 end
@@ -215,7 +219,11 @@ def test_move_vm_into_folder(appliance, vm_folder, create_vm, custom_instance)
   #       initialEstimate: 1/4h
   #       tags: automate
   #   
-  script = dedent()
+  script = dedent("
+        vm = $evm.vmdb('vm').find_by_name('#{create_vm.name}')
+        folder = $evm.vmdb('EmsFolder').find_by(:name => '#{vm_folder.name}')
+        vm.move_into_folder(folder) unless folder.nil?
+        ")
   instance = custom_instance.(ruby_code: script)
   view = navigate_to(create_vm, "Details")
   tree_path = view.sidebar.vmstemplates.tree.currently_selected
@@ -257,9 +265,17 @@ def test_list_of_diff_vm_storages_via_rails(appliance, setup_provider, provider,
   #           3. Returns only one storage
   #           4. Returns available storages
   #   
-  list_storages = dedent()
+  list_storages = dedent("vmware = $evm.vmdb(\"ems\").find_by_name(\"#{provider.name}\")
+vm = vmware.vms.select {|v| v.name == \"#{testing_vm.name}\"}.first
+storage = vm.storage
+storage_name = storage.name
+$evm.log(:info, \"storage name: #{storage_name}\")
+storages = vm.storages
+storage_name = storages[0].name
+$evm.log(:info, \"storages name: #{storage_name}\")
+")
   instance = custom_instance.(ruby_code: list_storages)
-  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [, ])).waiting(timeout: 120) {
+  (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*storage name: #{testing_vm.datastore.name}.*", ".*storages name: #{testing_vm.datastore.name}.*"])).waiting(timeout: 120) {
     simulate(appliance: appliance, message: "create", request: "Call_Instance", execute_methods: true, attributes_values: {"namespace" => instance.klass.namespace.name, "class" => instance.klass.name, "instance" => instance.name})
   }
 end

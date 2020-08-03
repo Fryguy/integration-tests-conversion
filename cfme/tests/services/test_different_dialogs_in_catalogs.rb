@@ -33,7 +33,7 @@ def service_dialog(appliance, widget_name)
   tab = sd.tabs.create(tab_label: fauxfactory.gen_alphanumeric(start: "tab_"), tab_desc: "my tab desc")
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   box.elements.create(element_data: [element_data])
-  yield [sd, element_data]
+  yield([sd, element_data])
   sd.delete_if_exists()
 end
 def catalog_item(appliance, provider, provisioning, service_dialog, catalog)
@@ -48,14 +48,14 @@ def catalog_item(appliance, provider, provisioning, service_dialog, catalog)
     end
   end
   catalog_item = appliance.collections.catalog_items.create(provider.catalog_item_type, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: "my catalog", display_in: true, catalog: catalog, dialog: sd, prov_data: provisioning_data)
-  yield catalog_item
+  yield(catalog_item)
   catalog_item.delete_if_exists()
 end
 def generic_catalog_item(appliance, service_dialog, catalog)
   sd,element_data = service_dialog
   item_name = fauxfactory.gen_alphanumeric(15, start: "cat_item_")
   catalog_item = appliance.collections.catalog_items.create(appliance.collections.catalog_items.GENERIC, name: item_name, description: fauxfactory.gen_alphanumeric(), display_in: true, catalog: catalog, dialog: sd)
-  yield catalog_item
+  yield(catalog_item)
   catalog_item.delete_if_exists()
 end
 def test_tagdialog_catalog_item(appliance, setup_provider, provider, catalog_item, request, service_dialog, widget_name)
@@ -75,24 +75,24 @@ def test_tagdialog_catalog_item(appliance, setup_provider, provider, catalog_ite
   #   
   sd,element_data = service_dialog
   vm_name = catalog_item.prov_data["catalog"]["vm_name"]
-  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(, provider).cleanup_on_provider()})
+  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate("#{vm_name}0001", provider).cleanup_on_provider()})
   dialog_values = {element_data["element_information"]["ele_name"] => "Gold"}
   service_catalogs = ServiceCatalogs(appliance, catalog: catalog_item.catalog, name: catalog_item.name, dialog_values: dialog_values)
   service_catalogs.order()
-  logger.info()
+  logger.info("Waiting for cfme provision request for service #{catalog_item.name}")
   provision_request = appliance.collections.requests.instantiate(catalog_item.name, partial_check: true)
   provision_request.wait_for_request()
-  msg = 
+  msg = "Request failed with the message #{provision_request.rest.message}"
   raise msg unless provision_request.is_succeeded()
 end
 def new_user(appliance, permission)
   collection = appliance.collections.tenants
   tenant = collection.create(name: fauxfactory.gen_alphanumeric(start: "tenant_"), description: fauxfactory.gen_alphanumeric(), parent: collection.get_root_tenant())
   role = appliance.collections.roles.create(name: fauxfactory.gen_alphanumeric(start: "role_"), vm_restriction: "Only User or Group Owned", product_features: permission)
-  group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(start: "grp_"), role: role.name, tenant: )
+  group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(start: "grp_"), role: role.name, tenant: "My Company/#{tenant.name}")
   creds = Credential(principal: fauxfactory.gen_alphanumeric(4), secret: fauxfactory.gen_alphanumeric(4))
   user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(start: "user_"), credential: creds, email: fauxfactory.gen_email(), groups: group, cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   user.delete_if_exists()
   group.delete_if_exists()
   role.delete_if_exists()

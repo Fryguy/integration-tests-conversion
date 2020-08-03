@@ -45,7 +45,7 @@ def test_vmware_provider_filters(appliance, provider, soft_assert)
   esx_platforms = ["Platform / ESX 6.0", "Platform / ESX 6.5", "Platform / ESX 6.7"]
   view = navigate_to(appliance.collections.hosts, "All")
   all_options = view.filters.navigation.all_options
-  logger.info()
+  logger.info("All options for Filters are: #{all_options} ")
   for esx_platform in esx_platforms
     soft_assert.(all_options.include?(esx_platform), "ESX Platform does not exists in options")
   end
@@ -241,7 +241,7 @@ def test_vmware_cdrom_dropdown_not_blank(appliance, provider)
   begin
     iso_ds = datastore_collection.instantiate(name: ds[0], provider: provider)
   rescue IndexError
-    pytest.skip()
+    pytest.skip("No datastores found of type iso on provider #{provider.name}")
   end
   iso_ds.run_smartstate_analysis()
   vms_collections = appliance.collections.infra_vms
@@ -293,9 +293,9 @@ def test_vmware_inaccessible_datastore_vm_provisioning(request, appliance, provi
   #   
   inaccessible_datastores = provider.mgmt.list_datastore().select{|datastore| !provider.mgmt.get_datastore(datastore).summary.accessible}.map{|datastore| datastore}
   if is_bool(inaccessible_datastores)
-    logger.info()
+    logger.info("Found #{inaccessible_datastores} inaccessible_datastores")
   else
-    pytest.skip()
+    pytest.skip("This provider #{provider.name} has no inaccessible_datastores.")
   end
   vm = appliance.collections.infra_vms.create(fauxfactory.gen_alphanumeric(18, start: "test-vmware-"), provider, find_in_cfme: true, wait: true, form_values: {"environment" => {"automatic_placement" => true}})
   request.addfinalizer(vm.delete)
@@ -360,9 +360,9 @@ def test_esxi_reboot_not_orphan_vms(appliance, provider)
   command = ("\'ems=ManageIQ::Providers::Vmware::InfraManager.find_by(:name =>\"" + provider.name) + "\");                vm = ems.vms.last;                puts \"VM_ID=#{vm.id} name=[#{vm.name}] uid=#{vm.uid_ems}\";                vm.update_attributes(:uid_ems => SecureRandom.uuid);                puts \"VM_ID=#{vm.id} name=[#{vm.name}] uid=#{vm.uid_ems}\"\'"
   result = appliance.ssh_client.run_rails_command(command)
   provider.refresh_provider_relationships()
-  raise  unless result.success
+  raise "SSH Command result was unsuccessful: #{result}" unless result.success
   if is_bool(!result.output)
-    logger.info()
+    logger.info("Output of Rails command was #{result.output}")
     vm_name = ((re.findall("\\[.+\\]", result.output)[0]).split_p("[")[1]).split_p("]")[0]
     vm = appliance.collections.infra_vms.instantiate(name: vm_name, provider: provider)
     view = vm.load_details(from_any_provider: true)
@@ -401,7 +401,7 @@ def test_switches_class_present_ems(appliance, provider)
   command = "\'$evm = MiqAeMethodService::MiqAeService.new(MiqAeEngine::MiqAeWorkspaceRuntime.new);                p = $evm.vmdb(:ems_infra).first;                p.class.name;                puts \"class name [#{p.switches.first.class.name}]\"\'
                 "
   result = appliance.ssh_client.run_rails_command(command)
-  raise  unless result.success
+  raise "SSH Command result was unsuccessful: #{result}" unless result.success
   logger.info("output of rails command: %s", result.output)
   raise unless result.output.downcase().include?("switch")
 end
@@ -436,7 +436,7 @@ def test_rebuilt_vcenter_duplicate_hosts(appliance, provider)
   hosts_before = appliance.rest_api.collections.hosts.all.size
   command = "'Host.all.each { |h| h.ems_id = nil; h.ems_ref = h.id.to_s; h.save! }'"
   result = appliance.ssh_client.run_rails_command(command)
-  raise  unless result.success
+  raise "SSH Command result was unsuccessful: #{result}" unless result.success
   logger.info("output of rails command: %s", result.output)
   provider.refresh_provider_relationships(wait: 300, delay: 30, refresh_delta: 120)
   hosts_after = appliance.rest_api.collections.hosts.all.size

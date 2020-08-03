@@ -23,7 +23,7 @@ SUBMIT = ["Submit all", "One by one"]
 def button_group(appliance, request)
   collection = appliance.collections.button_groups
   button_gp = collection.create(text: fauxfactory.gen_alphanumeric(start: "grp_"), hover: fauxfactory.gen_alphanumeric(15, start: "grp_hvr_"), type: collection.getattr(request.param))
-  yield [button_gp, request.param]
+  yield([button_gp, request.param])
   button_gp.delete_if_exists()
 end
 def setup_obj(appliance, button_group)
@@ -38,7 +38,7 @@ def setup_obj(appliance, button_group)
       if obj_type == "TENANT"
         obj = appliance.collections.tenants.get_root_tenant()
       else
-        logger.error()
+        logger.error("No object collected for custom button object type '#{obj_type}'")
       end
     end
   end
@@ -47,8 +47,13 @@ end
 def method(custom_instance, button_group)
   _,obj_type = button_group
   target_obj_map = {"USER" => "$evm.root['user']", "GROUP" => "$evm.root['miq_group']", "TENANT" => "$evm.vmdb($evm.root['vmdb_object_type']).find_by(:id=>$evm.root['tenant_id'])"}
-  ruby_code = dedent()
-  yield custom_instance.(ruby_code)
+  ruby_code = dedent("
+        # open external url with target object
+        target_obj = #{target_obj_map[obj_type]}
+        $evm.log(:info, \"Opening url\")
+        target_obj.external_url = \"https://example.com\"
+        ")
+  yield(custom_instance.(ruby_code))
 end
 def test_custom_button_display_evm_obj(request, display, setup_obj, button_group)
   #  Test custom button display on a targeted page
@@ -126,7 +131,7 @@ def test_custom_button_automate_evm_obj(appliance, request, submit, setup_obj, b
     raise unless appliance.ssh_client.run_command("echo -n \"\" > /var/www/miq/vmdb/log/automation.log")
     custom_button_group.item_select(button.text)
     diff = (appliance.version < "5.10") ? "executed" : "launched"
-    view.flash.assert_message()
+    view.flash.assert_message("\"#{button.text}\" was #{diff}")
     expected_count = (submit == "Submit all") ? 1 : entity_count
     begin
       wait_for(log_request_check, [appliance, expected_count], timeout: 120, message: "Check for expected request count", delay: 10)
@@ -272,7 +277,7 @@ def test_custom_button_open_url_evm_obj(request, setup_obj, button_group, method
   main_window = view.browser.current_window_handle
   custom_button_group.item_select(button.text)
   wait_for(lambda{|| view.browser.window_handles.size > initial_count}, timeout: 30, message: "Check for window open")
-  open_url_window = (Set.new(view.browser.window_handles) - ).pop()
+  open_url_window = (Set.new(view.browser.window_handles) - Set.new([main_window])).pop()
   view.browser.switch_to_window(open_url_window)
   _reset_window = lambda do
     view.browser.close_window(open_url_window)

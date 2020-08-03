@@ -29,7 +29,7 @@ def zero_disk_flavor(provider)
   api_flv = provider.mgmt.api.flavors.create(fauxfactory.gen_alpha(), RAM, VCPUS, ZERO_DISK_SIZE)
   wait_for(provider.is_refreshed, func_kwargs: {}, timeout: 600)
   zero_disk_flavor = provider.appliance.collections.cloud_flavors.instantiate(api_flv.name, provider)
-  yield zero_disk_flavor
+  yield(zero_disk_flavor)
   if is_bool(zero_disk_flavor.exists)
     zero_disk_flavor.delete()
   end
@@ -39,9 +39,9 @@ def private_flavor(appliance, provider)
   collection = appliance.collections.cloud_flavors
   private_flavor = collection.create(name: fauxfactory.gen_alpha(12, start: "flavor_"), provider: provider, ram: RAM, vcpus: VCPUS, disk: DISK_SIZE, swap: SWAP_SIZE, rxtx: RXTX, is_public: false, tenant: prov_data["cloud_tenant"])
   view = appliance.browser.create_view(navigator.get_class(collection, "All").VIEW)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Add of Flavor \"#{private_flavor.name}\" was successfully initialized.")
   wait_for(lambda{|| private_flavor.exists}, delay: 5, timeout: 600, fail_func: private_flavor.refresh, message: "Wait for flavor to appear")
-  yield private_flavor
+  yield(private_flavor)
   if is_bool(private_flavor.exists)
     private_flavor.delete()
   end
@@ -56,7 +56,7 @@ def new_instance(provider, zero_disk_flavor)
   rescue KeyError
     pytest.skip("Unable to find an image map in provider \"{}\" provisioning data: {}".format(provider, prov_data))
   end
-  yield instance
+  yield(instance)
   instance.cleanup_on_provider()
 end
 def instance_with_private_flavor(provider, private_flavor)
@@ -69,7 +69,7 @@ def instance_with_private_flavor(provider, private_flavor)
   rescue KeyError
     pytest.skip("Unable to find an image map in provider \"{}\" provisioning data: {}".format(provider, prov_data))
   end
-  yield instance
+  yield(instance)
   instance.cleanup_on_provider()
 end
 def test_create_instance_with_zero_disk_flavor(new_instance, soft_assert)
@@ -109,11 +109,11 @@ def test_flavor_crud(appliance, provider, request)
     end
   end
   view = appliance.browser.create_view(navigator.get_class(collection, "All").VIEW)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Add of Flavor \"#{flavor.name}\" was successfully initialized.")
   wait_for(lambda{|| flavor.exists}, delay: 5, timeout: 600, fail_func: flavor.refresh, message: "Wait for flavor to appear")
   flavor.delete()
   view = appliance.browser.create_view(navigator.get_class(collection, "All").VIEW)
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Delete of Flavor \"#{flavor.name}\" was successfully initiated.")
   wait_for(lambda{|| !flavor.exists}, delay: 5, timeout: 600, fail_func: flavor.refresh, message: "Wait for flavor to appear")
 end
 def test_flavors_details_from_list_view(appliance, soft_assert, private_flavor)
@@ -172,7 +172,7 @@ def test_create_instance_with_private_flavor(instance_with_private_flavor, provi
   raise unless flavor_obj.instance_count == 1
   flavor_obj.delete()
   view = navigate_to(collection, "All")
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("Delete of Flavor \"#{flavor_obj.name}\" was successfully initiated.")
   wait_for(lambda{|| !flavor_obj.exists}, delay: 5, timeout: 600, fail_func: flavor_obj.refresh, message: "Wait for flavor to disappear")
   view = navigate_to(instance_with_private_flavor, "Details")
   power_state = view.entities.summary("Power Management").get_text_of("Power State")
@@ -196,7 +196,7 @@ def test_filter_by_flavor_via_api(appliance)
   #       1596069
   #   
   flavor = choice(appliance.rest_api.collections.flavors.all)
-  url = 
+  url = "/api/vms?filter[]=flavor.name='#{flavor.name}'"
   appliance.rest_api.get(appliance.url_path(url))
   assert_response(appliance)
 end

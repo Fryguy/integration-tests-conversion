@@ -62,7 +62,7 @@ def test_pull_splitter_persistence(request, appliance, model_object, destination
     navigate_to(appliance.server, "Dashboard")
     navigate_to(model_object, destination)
     if is_bool(!selenium.find_element_by_xpath(("//div[@id='left_div'][contains(@class, {})]").format(unescape(quoteattr(position)))))
-      pytest.fail()
+      pytest.fail("Splitter did not persist when on '#{position}' position!")
     end
   end
 end

@@ -34,7 +34,7 @@ def control_policy(appliance, create_vm)
   policy.assign_events("VM Power Off")
   policy.assign_actions_to_event("VM Power Off", action)
   profile = appliance.collections.policy_profiles.create(fauxfactory.gen_alpha(), policies: [policy])
-  yield create_vm.assign_policy_profiles(profile.description)
+  yield(create_vm.assign_policy_profiles(profile.description))
   for obj in [profile, policy, action]
     if is_bool(obj.exists)
       obj.delete()
@@ -85,7 +85,7 @@ class InstEvent
   end
   def _rename_vm()
     logger.info("%r will be renamed", @inst.name)
-    new_name = 
+    new_name = "#{@inst.name}-renamed"
     @inst.mgmt.rename(new_name)
     @inst.name = new_name
     @inst.mgmt.restart()
@@ -200,7 +200,7 @@ def test_cloud_timeline_create_event(create_vm, soft_assert, azone)
   event = "create"
   inst_event = InstEvent.new(create_vm, event)
   logger.info("Will generate event %r on machine %r", event, create_vm.name)
-  wait_for(inst_event.emit, timeout: "9m", message: )
+  wait_for(inst_event.emit, timeout: "9m", message: "Event #{event} did timeout")
   inst_event.catch_in_timelines(soft_assert, targets)
 end
 def test_cloud_timeline_policy_event(create_vm, control_policy, soft_assert)
@@ -221,7 +221,7 @@ def test_cloud_timeline_policy_event(create_vm, control_policy, soft_assert)
   end
   inst_event = InstEvent.new(create_vm, event)
   logger.info("Will generate event %r on machine %r", event, create_vm.name)
-  wait_for(inst_event.emit, timeout: "9m", message: )
+  wait_for(inst_event.emit, timeout: "9m", message: "Event #{event} did timeout")
   inst_event.catch_in_timelines(soft_assert, targets, policy_events: true)
 end
 def test_cloud_timeline_stop_event(create_vm, soft_assert, azone)
@@ -242,7 +242,7 @@ def test_cloud_timeline_stop_event(create_vm, soft_assert, azone)
   event = "stop"
   inst_event = InstEvent.new(create_vm, event)
   logger.info("Will generate event %r on machine %r", event, create_vm.name)
-  wait_for(inst_event.emit, timeout: "7m", message: )
+  wait_for(inst_event.emit, timeout: "7m", message: "Event #{event} did timeout")
   inst_event.catch_in_timelines(soft_assert, targets)
 end
 def test_cloud_timeline_start_event(create_vm, soft_assert, azone)
@@ -263,7 +263,7 @@ def test_cloud_timeline_start_event(create_vm, soft_assert, azone)
   event = "start"
   inst_event = InstEvent.new(create_vm, "start")
   logger.info("Will generate event %r on machine %r", event, create_vm.name)
-  wait_for(inst_event.emit, timeout: "7m", message: )
+  wait_for(inst_event.emit, timeout: "7m", message: "Event #{event} did timeout")
   inst_event.catch_in_timelines(soft_assert, targets)
 end
 def test_cloud_timeline_diagnostic(create_vm, mark_vm_as_appliance, soft_assert)
@@ -301,7 +301,7 @@ def test_cloud_timeline_rename_event(create_vm, soft_assert, azone)
   end
   inst_event = InstEvent.new(create_vm, event)
   logger.info("Will generate event %r on machine %r", event, create_vm.name)
-  wait_for(inst_event.emit, timeout: "12m", message: )
+  wait_for(inst_event.emit, timeout: "12m", message: "Event #{event} did timeout")
   inst_event.catch_in_timelines(soft_assert, targets)
 end
 def test_cloud_timeline_delete_event(create_vm, soft_assert, azone)
@@ -325,6 +325,6 @@ def test_cloud_timeline_delete_event(create_vm, soft_assert, azone)
   end
   inst_event = InstEvent.new(create_vm, event)
   logger.info("Will generate event %r on machine %r", event, create_vm.name)
-  wait_for(inst_event.emit, timeout: "9m", message: )
+  wait_for(inst_event.emit, timeout: "9m", message: "Event #{event} did timeout")
   inst_event.catch_in_timelines(soft_assert, targets)
 end

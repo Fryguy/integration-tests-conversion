@@ -49,7 +49,7 @@ def test_container_reports_base_on_options(soft_assert, appliance)
   for base_on in ["Chargeback for Images", "Container Images", "Container Services", "Container Templates", "Containers", re.compile("Performance - Container\\s*Nodes"), re.compile("Performance - Container\\s*Projects"), "Performance - Containers"]
     compare = is_bool(base_on.instance_variable_defined? :@match) ? base_on.match : base_on.__eq__
     option = view.base_report_on.all_options.select{|opt| compare.(opt.text.to_s)}.map{|opt| opt}
-    soft_assert.(option, )
+    soft_assert.(option, "Could not find option \"#{base_on}\" for base report on.")
   end
 end
 def test_report_pods_per_ready_status(appliance, soft_assert, provider)
@@ -237,7 +237,7 @@ def test_report_recently_discovered_pods(appliance, provider, soft_assert)
   pods_in_report = report.data.rows.map{|row| row["Name"]}
   pods_per_ready_status = provider.pods_per_ready_status()
   for pod in pods_per_ready_status.keys()
-    soft_assert.(pods_in_report.include?(pod), )
+    soft_assert.(pods_in_report.include?(pod), "Could not find pod \"#{pod}\" in report.")
   end
 end
 def test_report_number_of_images_per_node(appliance, provider, soft_assert)

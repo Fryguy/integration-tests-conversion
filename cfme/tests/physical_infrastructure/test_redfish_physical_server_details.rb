@@ -5,7 +5,7 @@ include Cfme::Utils::Appliance::Implementations::Ui
 pytestmark = [pytest.mark.provider([RedfishProvider], scope: "function")]
 def physical_server(appliance, provider, setup_provider_funcscope)
   # Get and return the first physical server.
-  yield appliance.collections.redfish_physical_servers.all(provider)[0]
+  yield(appliance.collections.redfish_physical_servers.all(provider)[0])
 end
 def assert_message(physical_server, expected_message)
   # 

@@ -64,7 +64,7 @@ def test_service_manual_approval(appliance, provider, modify_instance, catalog_i
   request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(vm_name, provider).cleanup_on_provider()})
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
   service_catalogs.order()
-  logger.info()
+  logger.info("Waiting for cfme provision request for service #{catalog_item.name}")
   request_description = catalog_item.name
   service_request = appliance.collections.requests.instantiate(description: request_description, partial_check: true)
   service_request.update(method: "ui")
@@ -99,7 +99,7 @@ def test_service_retire_manual_approval(request, appliance, service_retirement_r
   service,_ = service_vm
   appliance.context.use(ViaUI) {
     service.retire(wait: false)
-    request_description = 
+    request_description = "Service Retire for: #{service.name}"
     service_request = appliance.collections.requests.instantiate(description: request_description, partial_check: true)
     service_request.update(method: "ui")
     raise unless service_request.row.approval_state.text == "Pending Approval"
@@ -113,7 +113,7 @@ def test_service_retire_manual_approval(request, appliance, service_retirement_r
     end
     raise unless service_request.row.approval_state.text == "Approved"
     service_request.wait_for_request()
-    msg = 
+    msg = "Request failed with the message #{service_request.rest.message}"
     request.addfinalizer(service_request.remove_request)
     raise msg unless service_request.is_succeeded()
   }

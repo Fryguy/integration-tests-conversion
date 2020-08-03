@@ -46,14 +46,14 @@ def set_and_get_tenant_quota(appliance)
   data = {}
   for (key, value) in PROPERTY_MAPPING.to_a()
     suffix = (value.include?("GB")) ? "GB" : "Count"
-    data[value] = 
+    data[value] = "#{tenant_quota_data[key]} #{suffix}"
   end
-  yield data
+  yield(data)
   root_tenant.set_quota(None: reset_data)
 end
 def tenant_report(appliance)
   tenant_report = appliance.collections.reports.instantiate(type: "Tenants", subtype: "Tenant Quotas", menu_name: "Tenant Quotas").queue(wait_for_finish: true)
-  yield tenant_report
+  yield(tenant_report)
   tenant_report.delete()
 end
 def get_report(appliance, request)
@@ -73,11 +73,11 @@ def vm(appliance, provider, request)
 end
 def create_custom_tag(appliance)
   category_name = fauxfactory.gen_alphanumeric().downcase()
-  category = appliance.rest_api.collections.categories.action.create({"name" => , "description" => })[0]
+  category = appliance.rest_api.collections.categories.action.create({"name" => "#{category_name}", "description" => "description_#{category_name}"})[0]
   assert_response(appliance)
-  tag = appliance.rest_api.collections.tags.action.create({"name" => , "description" => , "category" => {"href" => category.href}})[0]
+  tag = appliance.rest_api.collections.tags.action.create({"name" => "#{category_name}_entry", "description" => "#{category_name}_entry_description", "category" => {"href" => category.href}})[0]
   assert_response(appliance)
-  yield category_name
+  yield(category_name)
   tag.action.delete()
   category.action.delete()
 end
@@ -91,13 +91,13 @@ def restore_db(temp_appliance_preconfig, file_name)
   rescue FTPException
     pytest.skip("Failed to fetch the file from FTP server.")
   end
-  db_path = 
-  result = temp_appliance_preconfig.ssh_client.run_command()
+  db_path = "/tmp/#{db_file.name}"
+  result = temp_appliance_preconfig.ssh_client.run_command("curl -o #{db_path} ftp://#{db_file.link}")
   if is_bool(!result.success)
     pytest.fail("Failed to download the file to the appliance.")
   end
   _check_file_size = lambda do |file_path, expected_size|
-    return temp_appliance_preconfig.ssh_client.run_command().success
+    return temp_appliance_preconfig.ssh_client.run_command("stat #{file_path} | grep #{expected_size}").success
   end
   if is_bool(!_check_file_size.call(db_path, db_file.filesize))
     pytest.skip("File downloaded to the appliance, but it looks broken.")
@@ -114,12 +114,12 @@ def setup_vm(configure_fleecing, appliance, provider)
   vm = appliance.collections.infra_vms.instantiate(name: random_vm_name(context: "report", max_length: 20), provider: provider, template_name: "env-rhel7-20-percent-full-disk-pvala-tpl")
   vm.create_on_provider(allow_skip: "default", find_in_cfme: true)
   vm.smartstate_scan(wait_for_task_result: true)
-  yield vm
+  yield(vm)
   vm.cleanup_on_provider()
 end
 def edit_service_name(service_vm)
   service,vm = service_vm
-  new_name = 
+  new_name = "vm-test_#{service.name}"
   update(service) {
     service.name = new_name
   }
@@ -129,7 +129,7 @@ def timezone(appliance)
   tz,visual_tz = ["IST", "(GMT+05:30) Kolkata"]
   current_timezone = appliance.user.my_settings.visual.timezone
   appliance.user.my_settings.visual.timezone = visual_tz
-  yield tz
+  yield(tz)
   appliance.user.my_settings.visual.timezone = current_timezone
 end
 def test_non_admin_user_reports_access_rest(appliance, rbac_api)
@@ -172,7 +172,7 @@ def test_reports_custom_tags(appliance, request, create_custom_tag)
   #           1. Report must be created successfully.
   #   
   category_name = create_custom_tag
-  report_data = {"menu_name" => , "title" => , "base_report_on" => "Availability Zones", "report_fields" => [, ]}
+  report_data = {"menu_name" => "Custom Category Report #{category_name}", "title" => "Custom Category Report Title #{category_name}", "base_report_on" => "Availability Zones", "report_fields" => ["Cloud Manager.My Company Tags : description_#{category_name}", "VMs.My Company Tags : description_#{category_name}"]}
   report = appliance.collections.reports.create(None: report_data)
   request.addfinalizer(report.delete)
   raise unless report.exists

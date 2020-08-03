@@ -21,7 +21,7 @@ def check_paginator_for_page(view)
 end
 def schedule(appliance)
   schedule = appliance.collections.system_schedules.create(name: fauxfactory.gen_alphanumeric(15, start: "schedule_"), description: fauxfactory.gen_alphanumeric(20, start: "schedule_desc_"))
-  yield schedule
+  yield(schedule)
   schedule.delete()
 end
 def test_paginator_config_pages(appliance, place_info)
@@ -81,7 +81,7 @@ def test_paginator_details_page(appliance, place_info, schedule)
   raise unless check_paginator_for_page(view) == paginator_expected_result
   if is_bool(check_paginator_for_page(view))
     paginator = view.paginator
-    items_selector = Dropdown(view, )
+    items_selector = Dropdown(view, "#{paginator.items_per_page} Items")
     msg = "Not all options are present in items per page"
     raise msg unless Set.new(items_selection) == Set.new(items_selector.to_a)
   end

@@ -13,7 +13,7 @@ def advance_appliance_date_by_day(appliance)
   appliance_date = dateutil.parser.parse(txt_date)
   td = datetime.timedelta(days: 1)
   advanced_txt_date = (appliance_date + td).strftime("%Y-%m-%d %H:%M:%S%z")
-  appliance.ssh_client.run_command()
+  appliance.ssh_client.run_command("date -s '#{advanced_txt_date}'")
 end
 def test_appliance_log_rotate(temp_appliance_preconfig_funcscope)
   #  Checks whether the log is logrotated daily.
@@ -28,9 +28,9 @@ def test_appliance_log_rotate(temp_appliance_preconfig_funcscope)
   raise unless (appliance.ssh_client.run_command("/etc/cron.daily/logrotate")).success
   initial_log_files = {}
   for log_path in LOGS.pick()
-    initial_log_files[log_path] = appliance.ssh_client.run_command().output.split_p("
+    initial_log_files[log_path] = ((appliance.ssh_client.run_command("ls -1 #{log_path}*")).output).split_p("
 ")
-    appliance.ssh_client.run_command()
+    appliance.ssh_client.run_command("echo 'Ensure line in logs' >> #{log_path}")
   end
   advance_appliance_date_by_day(appliance)
   raise unless (appliance.ssh_client.run_command("/etc/cron.daily/logrotate")).success

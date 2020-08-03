@@ -112,6 +112,6 @@ def test_time_profile_copy(appliance)
   #   
   collection = appliance.collections.time_profiles
   time_profile = collection.create(description: fauxfactory.gen_alphanumeric(20, start: "time_profile_"), scope: "Current User", days: true, hours: true, timezone: "(GMT-10:00) Hawaii")
-  copied_time_profile = time_profile.copy(description: )
+  copied_time_profile = time_profile.copy(description: "check_copy#{time_profile.description}")
   collection.delete(false, time_profile, copied_time_profile)
 end

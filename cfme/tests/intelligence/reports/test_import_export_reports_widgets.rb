@@ -17,7 +17,7 @@ include Cfme::Utils::Path
 pytestmark = [pytest.mark.tier(1), test_requirements.report]
 def yaml_path(yaml_name)
   #  Returns yaml path of the file with yaml_name name
-  yaml_name = 
+  yaml_name = "#{yaml_name}.yaml"
   begin
     fs = FTPClientWrapper(cfme_data.ftpserver.entities.reports)
     file_path = fs.download(yaml_name, File.join("/tmp",yaml_name))
@@ -30,12 +30,12 @@ def yaml_path(yaml_name)
 end
 def widget(appliance)
   widget = appliance.collections.dashboard_report_widgets.instantiate(appliance.collections.dashboard_report_widgets.CHART, "testing widget", description: "testing widget description", filter: "Configuration Management/Virtual Machines/Guest OS Information - any OS", active: true)
-  yield widget
+  yield(widget)
   widget.delete_if_exists()
 end
 def report(appliance)
   report = appliance.collections.reports.instantiate(type: "My Company (All Groups)", subtype: "Custom", menu_name: "testing report", title: "testing report title")
-  yield report
+  yield(report)
   report.delete_if_exists()
 end
 def test_import_widget(appliance, widget)
@@ -83,7 +83,7 @@ def test_import_report(appliance, report)
   collection.import_report(yaml_path("import_report"))
   view = collection.create_view(ImportExportCustomReportsView)
   raise unless view.is_displayed
-  view.flash.assert_message()
+  view.flash.assert_message("Imported Report: [#{report.menu_name}]")
   raise unless report.exists
 end
 def test_export_report(appliance, report)
@@ -115,9 +115,9 @@ def test_import_duplicate_report(appliance, report, overwrite)
   view.flash.assert_message("Imported Report: ", partial: true)
   collection.import_report(file_path, overwrite: overwrite)
   if is_bool(overwrite)
-    view.flash.assert_message()
+    view.flash.assert_message("Replaced Report: [#{report.menu_name}]")
   else
-    view.flash.assert_message()
+    view.flash.assert_message("Skipping Report (already in DB): [#{report.menu_name}]")
   end
 end
 def test_reports_invalid_file(appliance, yaml_name)

@@ -55,7 +55,7 @@ class DbBackupData < Pretty
     #     
     creds_key = conf.cfme_data.get("log_db_operations", {}).get("credentials", false)
     raise "No 'credentials' key found for machine {machine_id}".format(None: @__dict__) unless creds_key
-    raise  unless conf.credentials.include?(creds_key) && conf.credentials[creds_key]
+    raise "No credentials for key '#{creds_key}' found in credentials yaml" unless conf.credentials.include?(creds_key) && conf.credentials[creds_key]
     credentials = conf.credentials[creds_key]
     return credentials
   end
@@ -64,7 +64,7 @@ class DbBackupData < Pretty
     #     
     data = {}
     for key in @required_keys[protocol_type]
-      raise  unless protocol_data.include?(key) && protocol_data[key]
+      raise "'#{key}' key must be set for scheduled #{protocol_type} backup to work" unless protocol_data.include?(key) && protocol_data[key]
       data[key] = protocol_data[key]
     end
     return data
@@ -119,7 +119,7 @@ end
 def get_ssh_client(hostname, credentials)
   #  Returns fresh ssh client connected to given server using given credentials
   #   
-  hostname = urlparse().netloc
+  hostname = (urlparse("scheme://#{hostname}")).netloc
   connect_kwargs = {"username" => credentials["username"], "password" => credentials["password"], "hostname" => hostname}
   return SSHClient(None: connect_kwargs)
 end
@@ -129,7 +129,7 @@ def get_full_path_to_file(path_on_host, schedule_name)
   if is_bool(!path_on_host.end_with?("/"))
     path_on_host += "/"
   end
-  full_path = 
+  full_path = "#{path_on_host}db_backup/region_*/#{schedule_name}"
   return full_path
 end
 def test_db_backup_schedule(request, db_backup_data, depot_machine_ip, appliance)
@@ -144,7 +144,7 @@ def test_db_backup_schedule(request, db_backup_data, depot_machine_ip, appliance
   dt = get_schedulable_datetime()
   hour = dt.strftime("%-H")
   minute = dt.strftime("%-M")
-  db_depot_uri = 
+  db_depot_uri = "#{depot_machine_ip}#{db_backup_data.sub_folder}"
   sched_args = {"name" => db_backup_data.schedule_name, "description" => db_backup_data.schedule_description, "active" => true, "action_type" => "Database Backup", "run_type" => "Once", "run_every" => nil, "time_zone" => "(GMT+00:00) UTC", "start_date" => dt, "start_hour" => hour, "start_minute" => minute, "depot_name" => fauxfactory.gen_alphanumeric()}
   if db_backup_data.protocol_type == "smb"
     sched_args.update({"backup_type" => "Samba", "uri" => db_depot_uri, "samba_username" => db_backup_data.credentials["username"], "samba_password" => db_backup_data.credentials["password"]})
@@ -152,7 +152,7 @@ def test_db_backup_schedule(request, db_backup_data, depot_machine_ip, appliance
     sched_args.update({"backup_type" => "Network File System", "uri" => db_depot_uri})
   end
   if db_backup_data.protocol_type == "nfs"
-    path_on_host = urlparse().path
+    path_on_host = (urlparse("nfs://#{db_depot_uri}")).path
   else
     path_on_host = db_backup_data.path_on_host
   end
@@ -160,18 +160,19 @@ def test_db_backup_schedule(request, db_backup_data, depot_machine_ip, appliance
   sched = appliance.collections.system_schedules.create(None: sched_args)
   delete_sched_and_files = lambda do
     get_ssh_client(db_depot_uri, db_backup_data.credentials) {|ssh_client|
-      ssh_client.run_command(, ensure_user: true)
+      ssh_client.run_command("rm -rf #{full_path}", ensure_user: true)
     }
     sched.delete()
   end
   request.addfinalizer(method(:delete_sched_and_files))
-  LogValidator("/var/www/miq/vmdb/log/evm.log", failure_patterns: []) {
+  LogValidator("/var/www/miq/vmdb/log/evm.log", failure_patterns: ["ERROR"]) {
     wait_for(lambda{|| sched.last_run_date != ""}, num_sec: 600, delay: 30, fail_func: sched.browser.refresh, message: "Schedule failed to run in 10mins from being set up")
   }
   get_ssh_client(db_depot_uri, db_backup_data.credentials) {|ssh_client|
-    raise  unless ssh_client.run_command(, ensure_user: true).success
-    file_check_cmd = 
-    wait_for(lambda{|| ssh_client.run_command(file_check_cmd, ensure_user: true).output == "1"}, delay: 5, num_sec: 60, message: )
+    raise "Could not cd into '#{path_on_host}' over ssh" unless ssh_client.run_command("cd \"#{path_on_host}\"", ensure_user: true).success
+    file_check_cmd = "find #{full_path}/* -cmin -5 | wc -l | tr -d '
+' "
+    wait_for(lambda{|| ssh_client.run_command(file_check_cmd, ensure_user: true).output == "1"}, delay: 5, num_sec: 60, message: "File '#{full_path}' not found on share")
   }
 end
 def test_scheduled_backup_handles_big_db()

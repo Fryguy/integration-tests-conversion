@@ -34,7 +34,7 @@ def test_evmserverd_stop(appliance, request)
     #     
     return appliance.ssh_client.status["servers"].map{|server| bool(server.get(server_name_key, false))}.is_all?
   end
-  server_names = 
+  server_names = appliance.ssh_client.status["servers"].map{|server| server[server_name_key].rstrip("*")}.to_set
   request.addfinalizer(appliance.evmserverd.start)
   appliance.evmserverd.stop()
   servers_stopped = lambda do

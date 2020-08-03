@@ -33,7 +33,7 @@ def cancel_migration_plan(appliance, provider, mapping_data_vm_obj_mini)
   else
     pytest.skip("Migration plan failed to start")
   end
-  yield migration_plan
+  yield(migration_plan)
   migration_plan.delete_completed_plan()
 end
 def test_dual_vm_cancel_migration(request, appliance, soft_assert, provider, source_type, dest_type, template_type, mapping_data_multiple_vm_obj_single_datastore)
@@ -131,7 +131,7 @@ def test_retry_migration_plan(appliance, cancel_migration_plan, source_type, des
   view.plans_completed_list.migrate_plan(migration_plan.name)
   raise unless migration_plan.wait_for_state("Started")
   retry_interval = (appliance.version < "5.11") ? 60 : 15
-  retry_interval_log = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [])
+  retry_interval_log = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [".*to Automate for delivery in \\[#{retry_interval}\\] seconds.*"])
   retry_interval_log.start_monitoring()
   raise unless retry_interval_log.validate(wait: "150s")
   raise unless migration_plan.wait_for_state("In_Progress")

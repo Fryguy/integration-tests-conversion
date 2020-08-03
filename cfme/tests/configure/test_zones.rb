@@ -44,7 +44,7 @@ def create_zone(appliance, name, desc)
     end
   end
   if __dummy0__
-    pytest.fail()
+    pytest.fail("Zone with name #{name} and description #{desc} not found in the collection.")
   end
   return new_zone
 end
@@ -62,18 +62,18 @@ def test_zone_crud(appliance)
   name = fauxfactory.gen_string("alphanumeric", NAME_LEN)
   desc = fauxfactory.gen_string("alphanumeric", DESC_LEN)
   zone = create_zone(appliance, name, desc)
-  raise  unless zone.exists
-  new_desc = 
+  raise "Zone could not be created with name #{name} and description #{desc}." unless zone.exists
+  new_desc = "#{zone.description}_updated"
   update(zone) {
     zone.description = new_desc
   }
   begin
     navigate_to(zone, "Zone")
   rescue ItemNotFound
-    pytest.fail()
+    pytest.fail("Zone description could not be updated. Expected: #{new_desc}. Current: #{zone.description}.")
   end
   zone.delete()
-  raise  unless !zone.exists
+  raise "Zone #{zone.description} could not be deleted." unless !zone.exists
 end
 def test_zone_add_cancel_validation(appliance)
   # 
@@ -118,10 +118,10 @@ def test_zone_add_duplicate(request, appliance)
   name = fauxfactory.gen_string("alphanumeric", NAME_LEN)
   desc = fauxfactory.gen_string("alphanumeric", DESC_LEN)
   zone = create_zone(appliance, name, desc)
-  raise  unless zone.exists
+  raise "Zone could not be created with name #{name} and description #{desc}." unless zone.exists
   request.addfinalizer(zone.delete)
   request.addfinalizer(lambda{|| cancel_zone_add(appliance)})
-  pytest.raises(Exception, match: ) {
+  pytest.raises(Exception, match: "Name is not unique within region #{appliance.server.zone.region.number}") {
     create_zone(appliance, name, desc)
   }
 end
@@ -167,7 +167,7 @@ def test_zone_add_whitespace(request, appliance)
   desc = "    " + fauxfactory.gen_string("alphanumeric", 8)
   zone = create_zone(appliance, name, desc)
   request.addfinalizer(zone.delete)
-  raise  unless zone.exists
+  raise "Zone with name #{name} and description #{desc}could not be found in the UI." unless zone.exists
 end
 def test_zone_add_blank_name(request, appliance)
   # 
@@ -220,7 +220,7 @@ def test_add_zone_windows_domain_credentials(request, appliance)
   request.addfinalizer(method(:_cleanup))
   view = navigate_to(zone, "Edit")
   username = view.username.read()
-  raise  unless username == values["username"]
+  raise "Current username is #{username}" unless username == values["username"]
 end
 def test_remove_zone_windows_domain_credentials(appliance)
   # 

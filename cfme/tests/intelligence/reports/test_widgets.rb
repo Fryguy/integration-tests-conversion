@@ -36,7 +36,7 @@ def custom_widgets(appliance)
   if appliance.version < "5.11"
     ws.push(collection.create(collection.RSS, fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), active: true, type: "Internal", feed: "Administrative Events", rows: "8", visibility: "<To All Users>"))
   end
-  yield ws
+  yield(ws)
   ws.map{|w| w.delete()}
 end
 def test_widgets_on_dashboard(appliance, request, dashboard, default_widgets, custom_widgets, soft_assert)
@@ -61,7 +61,7 @@ def test_widgets_on_dashboard(appliance, request, dashboard, default_widgets, cu
   dashboard_view = view.dashboards("Default Dashboard")
   soft_assert(dashboard_view.widgets.read().size == method(:custom_widgets).size, "Count of the widgets differ")
   for custom_w in custom_widgets
-    soft_assert(dashboard_view.widgets(custom_w.title).is_displayed, )
+    soft_assert(dashboard_view.widgets(custom_w.title).is_displayed, "Widget #{custom_w.title} not found on dashboard")
   end
 end
 def test_widgets_reorder_in_reports(request, dashboard)
@@ -136,7 +136,7 @@ system(cmd)
   widget = appliance.collections.dashboard_report_widgets.create(appliance.collections.dashboard_report_widgets.CHART, widget_name, description: fauxfactory.gen_alphanumeric(), active: true, filter: "Configuration Management/Virtual Machines/Vendor and Guest OS", timer: {"run" => "Hourly", "hours" => "Hour"}, visibility: "<To All Users>")
   request.addfinalizer(widget.delete)
   view = widget.create_view(AllDashboardWidgetsView)
-  view.flash.assert_message()
+  view.flash.assert_message("Widget \"#{widget.title}\" was saved")
   view = navigate_to(appliance.server, "Dashboard")
   view.add_widget.item_select(widget.title)
   view = navigate_to(widget, "Details")

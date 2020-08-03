@@ -37,7 +37,7 @@ def vm(provider, appliance, collection, setup_provider_modscope, small_template_
     new_vm.create_on_provider(find_in_cfme: true, allow_skip: "default")
   end
   vm_rest = collection.get(name: vm_name)
-  yield vm_rest
+  yield(vm_rest)
   vms = appliance.rest_api.collections.vms.find_by(name: vm_name)
   if is_bool(vms)
     vm = vms[0]
@@ -49,8 +49,8 @@ end
 def _create_snapshot_rest(appliance, vm)
   # Implement the snapshot create so tests can use the same method directly
   uid = fauxfactory.gen_alphanumeric(8)
-  snap_desc = 
-  vm.snapshots.action.create(name: , description: snap_desc, memory: false)
+  snap_desc = "snapshot #{uid}"
+  vm.snapshots.action.create(name: "test_snapshot_#{uid}", description: snap_desc, memory: false)
   assert_response(appliance)
   snap,__ = wait_for(lambda{|| vm.snapshots.find_by(description: snap_desc) || false}, num_sec: 800, delay: 5, message: "snapshot creation")
   snap = snap[0]
@@ -63,7 +63,7 @@ def vm_snapshot(appliance, vm)
   #       Tuple with VM and snapshot resources in REST API
   #   
   vm,snapshot = _create_snapshot_rest(appliance, vm)
-  yield [vm, snapshot]
+  yield([vm, snapshot])
   to_delete = vm.snapshots.find_by(description: snapshot.description)
   if is_bool(to_delete)
     snap = to_delete[0]

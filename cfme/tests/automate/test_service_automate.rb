@@ -36,7 +36,7 @@ pytestmark = [test_requirements.automate]
 def new_users(appliance)
   # This fixture creates new users
   users = 2.times.map{|_| appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(start: "user_").downcase(), credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: fauxfactory.gen_alphanumeric(4)), email: fauxfactory.gen_email(), groups: appliance.collections.groups.instantiate(description: "EvmGroup-super_administrator"), cost_center: "Workload", value_assign: "Database")}
-  yield users
+  yield(users)
   for user in users
     user = appliance.rest_api.collections.users.get(name: user.name)
     user.action.delete()
@@ -106,7 +106,7 @@ def setup_dynamic_dialog(appliance, custom_instance)
   tab = service_dialog.tabs.create(tab_label: fauxfactory.gen_alphanumeric(start: "tab_"), tab_desc: "my tab desc")
   box = tab.boxes.create(box_label: fauxfactory.gen_alphanumeric(start: "box_"), box_desc: "my box desc")
   box.elements.create(element_data: [element_data])
-  yield service_dialog
+  yield(service_dialog)
   service_dialog.delete_if_exists()
 end
 def test_automate_method_with_dialog(request, appliance, catalog, setup_dynamic_dialog)
@@ -135,7 +135,7 @@ def copy_klass(domain)
   #   catalog item
   domain.parent.instantiate(name: "ManageIQ").namespaces.instantiate(name: "Service").namespaces.instantiate(name: "Provisioning").namespaces.instantiate(name: "StateMachines").classes.instantiate(name: "ServiceProvision_Template").copy_to(domain.name)
   klass = domain.namespaces.instantiate(name: "Service").namespaces.instantiate(name: "Provisioning").namespaces.instantiate(name: "StateMachines").classes.instantiate(name: "ServiceProvision_Template")
-  yield klass
+  yield(klass)
   klass.delete_if_exists()
 end
 def catalog_item_setup(request, copy_klass, domain, catalog, dialog)
@@ -156,13 +156,13 @@ def catalog_item_setup(request, copy_klass, domain, catalog, dialog)
   cat_list = []
   for i in 2.times
     method = copy_klass.methods.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), location: "inline", script: script[i])
-    instance = copy_klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"var" => {"value" => }})
-    entry_point = ["Datastore", , "Service", "Provisioning", "StateMachines", , ]
+    instance = copy_klass.instances.create(name: fauxfactory.gen_alphanumeric(), display_name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), fields: {"var" => {"value" => "METHOD::#{method.name}"}})
+    entry_point = ["Datastore", "#{domain.name}", "Service", "Provisioning", "StateMachines", "#{copy_klass.name}", "#{instance.display_name} (#{instance.name})"]
     catalog_item = domain.appliance.collections.catalog_items.create(domain.appliance.collections.catalog_items.GENERIC, name: fauxfactory.gen_alphanumeric(), description: fauxfactory.gen_alphanumeric(), display_in: true, catalog: catalog, dialog: dialog, provisioning_entry_point: entry_point)
     cat_list.push(catalog_item)
     request.addfinalizer(cat_list[i].delete_if_exists)
   end
-  yield [catalog_item, cat_list]
+  yield([catalog_item, cat_list])
 end
 def test_passing_value_between_catalog_items(request, appliance, catalog_item_setup)
   # 
@@ -183,7 +183,7 @@ def test_passing_value_between_catalog_items(request, appliance, catalog_item_se
   (LogValidator("/var/www/miq/vmdb/log/automation.log", matched_patterns: [".*service var:.*service_var = test value for service var.*"])).waiting(timeout: 120) {
     service_catalogs = ServiceCatalogs(appliance, catalog_bundle.catalog, catalog_bundle.name)
     service_catalogs.order()
-    request_description = 
+    request_description = "Provisioning Service [#{catalog_bundle.name}] from [#{catalog_bundle.name}]"
     provision_request = appliance.collections.requests.instantiate(request_description)
     provision_request.wait_for_request(method: "ui")
     request.addfinalizer(provision_request.remove_request)
@@ -239,8 +239,8 @@ def test_import_dialog_file_without_selecting_file(appliance, dialog)
 end
 def new_user(appliance)
   # This fixture creates new user which has permissions to perform operation on Vm
-  user = appliance.collections.users.create(name: , credential: Credential(principal: , secret: fauxfactory.gen_alphanumeric(4)), email: fauxfactory.gen_email(), groups: appliance.collections.groups.instantiate(description: "EvmGroup-vm_user"), cost_center: "Workload", value_assign: "Database")
-  yield user
+  user = appliance.collections.users.create(name: "user_#{fauxfactory.gen_alphanumeric().downcase()}", credential: Credential(principal: "uid#{fauxfactory.gen_alphanumeric(4)}", secret: fauxfactory.gen_alphanumeric(4)), email: fauxfactory.gen_email(), groups: appliance.collections.groups.instantiate(description: "EvmGroup-vm_user"), cost_center: "Workload", value_assign: "Database")
+  yield(user)
   user = appliance.rest_api.collections.users.get(name: user.name)
   user.action.delete()
 end
@@ -282,7 +282,7 @@ def domain_setup(domain)
   # This fixture used to setup the domain structure
   klass = domain.parent.instantiate(name: "ManageIQ").namespaces.instantiate(name: "System").namespaces.instantiate(name: "CommonMethods").classes.instantiate(name: "QuotaMethods")
   klass.methods.instantiate(name: "requested").copy_to(domain.name)
-  method = domain.parent.instantiate(name: ).namespaces.instantiate(name: "System").namespaces.instantiate(name: "CommonMethods").classes.instantiate(name: "QuotaMethods").methods.instantiate(name: "requested")
+  method = domain.parent.instantiate(name: "#{domain.name}").namespaces.instantiate(name: "System").namespaces.instantiate(name: "CommonMethods").classes.instantiate(name: "QuotaMethods").methods.instantiate(name: "requested")
   yield
   method.delete_if_exists()
 end
@@ -290,7 +290,7 @@ def tenants_setup(appliance)
   # This fixture creates two parent tenants
   parent_tenant = appliance.collections.tenants.create(name: fauxfactory.gen_alphanumeric(18, start: "test_parent_"), description: fauxfactory.gen_alphanumeric(18, start: "parent_desc_"), parent: appliance.collections.tenants.get_root_tenant())
   child_tenant = appliance.collections.tenants.create(name: fauxfactory.gen_alphanumeric(18, start: "test_parent_"), description: fauxfactory.gen_alphanumeric(18, start: "parent_desc_"), parent: parent_tenant)
-  yield [parent_tenant, child_tenant]
+  yield([parent_tenant, child_tenant])
   child_tenant.delete_if_exists()
   parent_tenant.delete_if_exists()
 end
@@ -299,12 +299,12 @@ def set_child_tenant_quota(request, appliance, tenants_setup)
   field_value = request.param
   tenant_quota_data = {}
   for (field, value) in field_value
-    tenant_quota_data.update({ => true, "field" => value})
+    tenant_quota_data.update({"#{field}_cb" => true, "field" => value})
   end
   child_tenant.set_quota(None: tenant_quota_data)
   yield
   for (field, value) in field_value
-    tenant_quota_data.update({ => false})
+    tenant_quota_data.update({"#{field}_cb" => false})
     tenant_quota_data.pop(field)
   end
   child_tenant.set_quota(None: tenant_quota_data)
@@ -314,14 +314,14 @@ def new_group_tenant(appliance, tenants_setup)
   parent_tenant,child_tenant = tenants_setup
   role = appliance.collections.roles.instantiate(name: "EvmRole-user_self_service")
   user_role = role.copy(name: fauxfactory.gen_alphanumeric(25, "self_service_role_"), vm_restriction: "None")
-  group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: user_role.name, tenant: )
-  yield group
+  group = appliance.collections.groups.create(description: fauxfactory.gen_alphanumeric(start: "group_"), role: user_role.name, tenant: "My Company/#{child_tenant.parent_tenant.name}/#{child_tenant.name}")
+  yield(group)
   group.delete_if_exists()
 end
 def new_child_tenant_user(appliance, new_group_tenant)
   # This fixture creates new user which is assigned to new group and project
   user = appliance.collections.users.create(name: fauxfactory.gen_alphanumeric(start: "user_").downcase(), credential: Credential(principal: fauxfactory.gen_alphanumeric(start: "uid"), secret: fauxfactory.gen_alphanumeric(start: "pwd")), email: fauxfactory.gen_email(), groups: new_group_tenant, cost_center: "Workload", value_assign: "Database")
-  yield user
+  yield(user)
   user.delete_if_exists()
 end
 def test_quota_calculation_using_service_dialog_overrides(request, appliance, setup_provider, provider, domain_setup, set_child_tenant_quota, context, custom_prov_data, import_dialog, file_name, catalog, new_child_tenant_user)
@@ -372,7 +372,7 @@ def test_quota_calculation_using_service_dialog_overrides(request, appliance, se
       service_catalogs.order()
     }
   }
-  request_description = 
+  request_description = "Provisioning Service [#{catalog_item.name}] from [#{catalog_item.name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
   request.addfinalizer(provision_request.remove_request)

@@ -33,13 +33,13 @@ def pytest_generate_tests(metafunc)
     __dummy0__ = false
     for (ds_type, ds_name) in testable_datastores
       new_argvalues.push([provider_arg, ds_type, ds_name])
-      new_idlist.push()
+      new_idlist.push("#{idlist[index]}-#{ds_type}")
       if (ds_type, ds_name) == testable_datastores[-1]
         __dummy0__ = true
       end
     end
     if __dummy0__
-      logger.warning()
+      logger.warning("No testable datastores found for SSA on #{provider_arg}")
     end
   end
   testgen.parametrize(metafunc, argnames, new_argvalues, ids: new_idlist, scope: "module")
@@ -53,7 +53,7 @@ def datastores_hosts_setup(provider, datastore)
   for host in hosts
     host_data = provider.data.get("hosts", {}).select{|data| data.get("name") == host.name}.map{|data| data}
     if is_bool(!host_data)
-      pytest.skip()
+      pytest.skip("No host data for provider #{provider} and datastore #{datastore}")
     end
     host.update_credentials_rest(credentials: host_data[0]["credentials"])
     if host == hosts[-1]
@@ -61,7 +61,7 @@ def datastores_hosts_setup(provider, datastore)
     end
   end
   if __dummy1__
-    pytest.skip()
+    pytest.skip("No hosts attached to the datastore selected for testing: #{datastore}")
   end
   yield
   for host in hosts
@@ -87,7 +87,7 @@ def test_run_datastore_analysis(setup_provider, datastore, soft_assert, datastor
   begin
     datastore.run_smartstate_analysis(wait_for_task_result: true)
   rescue [MenuItemNotFound, DropdownDisabled]
-    pytest.skip()
+    pytest.skip("Smart State analysis is disabled for #{datastore.name} datastore")
   end
   details_view = navigate_to(datastore, "DetailsFromProvider")
   wait_for(lambda{|| details_view.entities.content.get_text_of(CONTENT_ROWS_TO_CHECK[0])}, delay: 15, timeout: "3m", fail_condition: "0", fail_func: appliance.server.browser.refresh)
@@ -95,7 +95,7 @@ def test_run_datastore_analysis(setup_provider, datastore, soft_assert, datastor
   if managed_vms != "0"
     for row_name in CONTENT_ROWS_TO_CHECK
       value = details_view.entities.content.get_text_of(row_name)
-      soft_assert.(value != "0", )
+      soft_assert.(value != "0", "Expected value for #{row_name} to be non-empty")
     end
   else
     raise unless details_view.entities.content.get_text_of(CONTENT_ROWS_TO_CHECK[-1]) != "0"

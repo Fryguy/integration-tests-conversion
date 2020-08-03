@@ -24,7 +24,7 @@ end
 def testing_group(appliance)
   group_desc = fauxfactory.gen_alphanumeric()
   group = appliance.collections.button_groups.create(text: group_desc, hover: group_desc, type: appliance.collections.button_groups.VM_INSTANCE)
-  yield group
+  yield(group)
   group.delete_if_exists()
 end
 def test_vmware_vimapi_hotadd_disk(appliance, request, testing_group, create_vm, domain, cls)

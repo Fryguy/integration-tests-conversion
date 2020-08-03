@@ -50,14 +50,14 @@ end
 def button_group(appliance, generic_definition)
   appliance.context.use(ViaUI) {
     group = generic_definition.collections.generic_object_groups_buttons.create(name: fauxfactory.gen_numeric_string(13, start: "btn_group", separator: "-"), description: fauxfactory.gen_alphanumeric(start: "disc", separator: "-"), image: "fa-user")
-    yield group
+    yield(group)
     group.delete_if_exists()
   }
 end
 def button_without_group(appliance, generic_definition)
   appliance.context.use(ViaUI) {
     button = generic_definition.add_button(name: fauxfactory.gen_alphanumeric(start: "btn", separator: "-"), description: fauxfactory.gen_alphanumeric(), request: fauxfactory.gen_alphanumeric())
-    yield button
+    yield(button)
     button.delete_if_exists()
   }
 end
@@ -82,17 +82,17 @@ def test_custom_group_on_generic_class_crud(appliance, generic_definition)
   appliance.context.use(ViaUI) {
     group = generic_definition.collections.generic_object_groups_buttons.create(name: fauxfactory.gen_numeric_string(13, start: "btn_group", separator: "-"), description: fauxfactory.gen_alphanumeric(start: "disc", separator: "-"), image: "fa-user")
     view = appliance.browser.create_view(GenericObjectDefinitionDetailsView)
-    view.flash.assert_success_message()
+    view.flash.assert_success_message("Custom Button Group \"#{group.name}\" has been successfully added.")
     raise unless group.exists
     update(group) {
       group.name = fauxfactory.gen_numeric_string(13, start: "btn_group", separator: "-")
       group.description = fauxfactory.gen_alphanumeric(start: "disc", separator: "-")
     }
-    view.flash.assert_success_message()
+    view.flash.assert_success_message("Custom Button Group \"#{group.name}\" has been successfully saved.")
     raise unless group.exists
     group.delete()
     if is_bool(!BZ(1744478).blocks || BZ(1773666).blocks)
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("CustomButtonSet: \"#{group.name}\" was successfully deleted")
     else
       view.flash.assert_success_message("Button Group:\"undefined\" was successfully deleted")
     end
@@ -123,9 +123,9 @@ def test_custom_button_on_generic_class_crud(appliance, button_group, is_undefin
     button = parent.collections.generic_object_buttons.create(name: fauxfactory.gen_numeric_string(start: "btn", separator: "-"), description: fauxfactory.gen_numeric_string(start: "disc", separator: "-"), image: "fa-home", request: "InspectMe")
     view = appliance.browser.create_view(GenericObjectDefinitionDetailsView)
     if is_bool(is_undefined)
-      msg = 
+      msg = "Custom Button \"#{button.name}\" has been successfully added."
     else
-      msg = 
+      msg = "Custom Button \"#{button.name}\" has been successfully added under the selected button group."
     end
     view.flash.assert_success_message(msg)
     raise unless button.exists
@@ -133,11 +133,11 @@ def test_custom_button_on_generic_class_crud(appliance, button_group, is_undefin
       button.name = fauxfactory.gen_numeric_string(start: "btn", separator: "-")
       button.description = fauxfactory.gen_alphanumeric(start: "disc", separator: "-")
     }
-    view.flash.assert_success_message()
+    view.flash.assert_success_message("Custom Button \"#{button.name}\" has been successfully saved.")
     raise unless button.exists
     button.delete()
     if is_bool(!BZ(1744478).blocks || BZ(1773666).blocks)
-      view.flash.assert_success_message()
+      view.flash.assert_success_message("CustomButton: \"#{button.name}\" was successfully deleted")
     else
       view.flash.assert_success_message("Button:\"undefined\" was successfully deleted")
     end
@@ -258,7 +258,7 @@ def test_generic_object_button_delete_flash(button_without_group)
   view.configuration.item_select("Remove this Custom Button from Inventory", handle_alert: true)
   view = button_without_group.create_view(GenericObjectDefinitionAllView)
   raise unless view.is_displayed
-  view.flash.assert_success_message()
+  view.flash.assert_success_message("CustomButton: \"#{button_without_group.name}\" was successfully deleted")
 end
 def test_generic_object_button_delete_multiple()
   # 

@@ -22,53 +22,53 @@ def delete_entity(entity)
 end
 def create_network(appliance, provider, is_external)
   collection = appliance.collections.cloud_networks
-  network = collection.create(name: fauxfactory.gen_alpha(start: "nwk_"), tenant: provider.data.get("provisioning").get("cloud_tenant"), provider: provider, network_type: "VXLAN", network_manager: , is_external: is_external)
+  network = collection.create(name: fauxfactory.gen_alpha(start: "nwk_"), tenant: provider.data.get("provisioning").get("cloud_tenant"), provider: provider, network_type: "VXLAN", network_manager: "#{provider.name} Network Manager", is_external: is_external)
   return network
 end
 def create_subnet(appliance, provider, network)
   collection = appliance.collections.network_subnets
-  subnet = collection.create(name: fauxfactory.gen_alpha(12, start: "subnet_"), tenant: provider.data.get("provisioning").get("cloud_tenant"), provider: provider, network_manager: , network_name: network.name, cidr: SUBNET_CIDR)
+  subnet = collection.create(name: fauxfactory.gen_alpha(12, start: "subnet_"), tenant: provider.data.get("provisioning").get("cloud_tenant"), provider: provider, network_manager: "#{provider.name} Network Manager", network_name: network.name, cidr: SUBNET_CIDR)
   return subnet
 end
 def create_router(appliance, provider, ext_gw, ext_network: nil, ext_subnet: nil)
   collection = appliance.collections.network_routers
-  router = collection.create(name: fauxfactory.gen_alpha(12, start: "router_"), tenant: provider.data.get("provisioning").get("cloud_tenant"), provider: provider, network_manager: , has_external_gw: ext_gw, ext_network: ext_network, ext_network_subnet: ext_subnet)
+  router = collection.create(name: fauxfactory.gen_alpha(12, start: "router_"), tenant: provider.data.get("provisioning").get("cloud_tenant"), provider: provider, network_manager: "#{provider.name} Network Manager", has_external_gw: ext_gw, ext_network: ext_network, ext_network_subnet: ext_subnet)
   return router
 end
 def network(provider, appliance)
   # Create cloud network
   network = create_network(appliance, provider, is_external: false)
-  yield network
+  yield(network)
   delete_entity(network)
 end
 def ext_network(provider, appliance)
   # Create external cloud network
   network = create_network(appliance, provider, is_external: true)
-  yield network
+  yield(network)
   delete_entity(network)
 end
 def subnet(provider, appliance, network)
   # Creates subnet for the given network
   subnet = create_subnet(appliance, provider, network)
-  yield subnet
+  yield(subnet)
   delete_entity(subnet)
 end
 def ext_subnet(provider, appliance, ext_network)
   # Creates subnet for the given external network
   subnet = create_subnet(appliance, provider, ext_network)
-  yield subnet
+  yield(subnet)
   delete_entity(subnet)
 end
 def router(provider, appliance)
   # Creates network router
   router = create_router(appliance, provider, ext_gw: false)
-  yield router
+  yield(router)
   delete_entity(router)
 end
 def router_with_gw(provider, appliance, ext_subnet)
   # Creates network router with external network as a gateway
   router = create_router(appliance, provider, ext_gw: true, ext_network: ext_subnet.network, ext_subnet: ext_subnet.name)
-  yield router
+  yield(router)
   delete_entity(router)
 end
 def test_create_network(network, provider)

@@ -42,7 +42,7 @@ def prov_data(provider, vm_name, template_name, provisioning)
 end
 def domain(appliance)
   domain = appliance.collections.domains.create(fauxfactory.gen_alphanumeric(start: "domain_"), fauxfactory.gen_alphanumeric(15, start: "domain_desc_"), enabled: true)
-  yield domain
+  yield(domain)
   if is_bool(domain.exists)
     domain.delete()
   end
@@ -50,7 +50,7 @@ end
 def catalog_item(appliance, provider, dialog, catalog, prov_data)
   collection = appliance.collections.catalog_items
   catalog_item = collection.create(provider.catalog_item_type, name: fauxfactory.gen_alphanumeric(15, start: "cat_item_"), description: "test catalog", display_in: true, catalog: catalog, dialog: dialog, prov_data: prov_data)
-  yield catalog_item
+  yield(catalog_item)
   if is_bool(catalog_item.exists)
     catalog_item.delete()
   end

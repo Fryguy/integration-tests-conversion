@@ -76,7 +76,7 @@ def test_containers_smartstate_analysis_multiple_images(provider, test_item, del
     for (tbl, attr, verifier) in test_item.tested_attr
       table = view.entities.getattr(tbl)
       table_data = table.read().to_a().map{|k, v|[k.downcase(), v]}.to_h
-      if is_bool(!soft_assert.(table_data.include?(attr.downcase()), ))
+      if is_bool(!soft_assert.(table_data.include?(attr.downcase()), "#{tbl} table has missing attribute '#{attr}'"))
         next
       end
       provider.refresh_provider_relationships()
@@ -86,7 +86,7 @@ def test_containers_smartstate_analysis_multiple_images(provider, test_item, del
         next
       end
       value = wait_for_retval.out
-      soft_assert.(verifier(value), )
+      soft_assert.(verifier(value), "#{tbl}.#{attr} attribute has unexpected value (#{value})")
     end
   end
 end

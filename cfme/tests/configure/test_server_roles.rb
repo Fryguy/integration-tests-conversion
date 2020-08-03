@@ -21,7 +21,7 @@ def roles(request, all_possible_roles)
       result[role] = cfme_data.get("server_roles", {})["sets"][request.param].include?(role)
     end
   rescue [KeyError, NoMethodError]
-    pytest.skip()
+    pytest.skip("Failed looking up role '#{role}' in cfme_data['server_roles']['sets']['#{request.param}']")
   end
   result["user_interface"] = true
   return result
@@ -47,9 +47,9 @@ def test_server_roles_changing(request, roles, appliance)
   server_settings.update_server_roles_ui(roles)
   for (role, is_enabled) in server_settings.server_roles_ui.to_a()
     if is_bool(is_enabled)
-      raise  unless roles[role]
+      raise "Role '#{role}' is selected but should not be" unless roles[role]
     else
-      raise  unless !roles[role]
+      raise "Role '#{role}' is not selected but should be" unless !roles[role]
     end
   end
 end

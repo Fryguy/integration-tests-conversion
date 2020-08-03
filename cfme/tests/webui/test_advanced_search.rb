@@ -58,11 +58,11 @@ def _can_open_advanced_search(param, appliance)
   #       initialEstimate: 1/10h
   #   
   view = _navigation(param, appliance)
-  raise  unless view.search.is_advanced_search_possible
+  raise "Advanced search not displayed for #{param.entity} on #{param.destination.downcase()}" unless view.search.is_advanced_search_possible
   view.search.open_advanced_search()
-  raise  unless view.search.is_advanced_search_opened
+  raise "Advanced search failed to open for #{param.entity} on #{param.destination.downcase()}" unless view.search.is_advanced_search_opened
   view.search.close_advanced_search()
-  raise  unless !view.search.is_advanced_search_opened
+  raise "Advanced search failed to close for #{param.entity} on #{param.destination.downcase()}" unless !view.search.is_advanced_search_opened
 end
 def _filter_crud(param, appliance)
   # 
@@ -79,9 +79,9 @@ def _filter_crud(param, appliance)
   if !param.filter.include?(":")
     filter_value = fauxfactory.gen_numeric_string(3)
     filter_value_updated = fauxfactory.gen_numeric_string(3)
-    view.search.save_filter(, filter_name)
+    view.search.save_filter("fill_count(#{param.filter}, =, #{filter_value})", filter_name)
   else
-    view.search.save_filter(, filter_name)
+    view.search.save_filter("fill_field(#{param.filter}, =, #{filter_value})", filter_name)
   end
   view.search.close_advanced_search()
   view.flash.assert_no_error()
@@ -148,7 +148,7 @@ def inject_tests(metaclass)
   #   
   for test in _tests
     method = methodized(test)
-    setattr(metaclass, , method)
+    setattr(metaclass, "test#{test.__name__}", method)
   end
   return metaclass
 end

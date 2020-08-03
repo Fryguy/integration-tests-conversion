@@ -50,13 +50,13 @@ def test_rhev_iso_servicecatalog(appliance, provider, setup_provider, setup_iso_
   #       casecomponent: Services
   #   
   vm_name = catalog_item.prov_data["catalog"]["vm_name"]
-  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate(, provider).cleanup_on_provider()})
+  request.addfinalizer(lambda{|| appliance.collections.infra_vms.instantiate("#{vm_name}0001", provider).cleanup_on_provider()})
   service_catalogs = ServiceCatalogs(appliance, catalog_item.catalog, catalog_item.name)
   service_catalogs.order()
   logger.info("Waiting for cfme provision request for service %s", catalog_item.name)
   request_description = catalog_item.name
   provision_request = appliance.collections.requests.instantiate(request_description, partial_check: true)
   provision_request.wait_for_request()
-  msg = 
+  msg = "Provisioning failed with the message #{provision_request.rest.message}"
   raise msg unless provision_request.is_succeeded()
 end

@@ -11,7 +11,7 @@ include Cfme::Utils::Appliance::Implementations::Ui
 pytestmark = [pytest.mark.tier(3), test_requirements.report, pytest.mark.usefixtures("setup_provider_modscope"), pytest.mark.provider([BaseProvider], selector: ONE, scope: "module")]
 def report(appliance)
   report = (appliance.collections.reports.instantiate(type: "Configuration Management", subtype: "Virtual Machines", menu_name: "Guest OS Information - any OS")).queue(wait_for_finish: true)
-  yield report
+  yield(report)
   report.delete_if_exists()
 end
 def test_report_view(report, view_mode)
@@ -34,5 +34,5 @@ def test_report_view(report, view_mode)
     view = navigate_to(report, "Details")
   end
   view.view_selector.select(view_mode)
-  raise  unless view.view_selector.selected == view_mode
+  raise "View setting failed for #{view}" unless view.view_selector.selected == view_mode
 end

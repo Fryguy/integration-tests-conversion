@@ -48,7 +48,7 @@ def test_templates(provider, soft_assert)
   templates_view = navigate_to(provider, "ProviderTemplates")
   template_names = templates_view.entities.entity_names
   for image in images
-    soft_assert.(template_names.include?(image), )
+    soft_assert.(template_names.include?(image), "Missing template: #{image}")
   end
 end
 def test_stacks(provider)

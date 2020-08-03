@@ -5,7 +5,7 @@ def vmdb_config(appliance)
   config = appliance.advanced_settings
   original = deepcopy(config)
   raise unless config["http_proxy"]["default"]["host"] === nil
-  yield config
+  yield(config)
   appliance.update_advanced_settings(original)
 end
 def reset_leaf(config)

@@ -18,7 +18,7 @@ pytestmark = [pytest.mark.tier(3), test_requirements.cloud, pytest.mark.usefixtu
 def keypair(appliance, provider)
   key = appliance.collections.cloud_keypairs.create(name: fauxfactory.gen_alphanumeric(), provider: provider)
   raise unless key.exists
-  yield key
+  yield(key)
 end
 def test_keypair_crud(appliance, provider)
   #  This will test whether it will create new Keypair and then deletes it.

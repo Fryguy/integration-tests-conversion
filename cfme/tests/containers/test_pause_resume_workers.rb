@@ -13,7 +13,7 @@ def check_ems_state_in_diagnostics(appliance, provider)
   workers_view = navigate_to(appliance.collections.diagnostic_workers, "AllDiagnosticWorkers")
   workers_view.browser.refresh()
   begin
-    if is_bool(workers_view.workers_table.rows(name: ).next())
+    if is_bool(workers_view.workers_table.rows(name: "Event Monitor for Provider: #{provider.name}").next())
       return true
     end
   rescue Exception
@@ -68,14 +68,14 @@ def test_pause_and_resume_single_provider_api(appliance, provider, from_collecti
   #       initialEstimate: 1/6h
   #   
   match_disable = (appliance.version > 5.11) ? "Pausing" : "Disabling"
-  evm_tail_disable = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [])
+  evm_tail_disable = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [".*#{match_disable} EMS \\[#{provider.name}\\] id \\[#{provider.id}\\].*"])
   evm_tail_disable.start_monitoring()
   if is_bool(from_collections)
     rep_disable = appliance.collections.containers_providers.pause_providers(provider)
-    soft_assert.(rep_disable[0].get("success"), )
+    soft_assert.(rep_disable[0].get("success"), "Disabling provider #{provider.name} failed")
   else
     rep_disable = provider.pause()
-    soft_assert.(rep_disable.get("success"), )
+    soft_assert.(rep_disable.get("success"), "Disabling provider #{provider.name} failed")
   end
   soft_assert.(!provider.is_provider_enabled, "Provider {} is still enabled".format(provider.name))
   raise unless evm_tail_disable.validate()
@@ -88,19 +88,19 @@ def test_pause_and_resume_single_provider_api(appliance, provider, from_collecti
   end
   project = appliance.collections.container_projects.instantiate(name: project_name, provider: provider)
   provider.refresh_provider_relationships()
-  soft_assert(wait_for(lambda{|| !project.exists}, delay: 5, num_sec: 100, message: "waiting for project to display"), )
+  soft_assert(wait_for(lambda{|| !project.exists}, delay: 5, num_sec: 100, message: "waiting for project to display"), "Project #{project_name} exists even though provider has been disabled")
   match_enable = (appliance.version > 5.11) ? "Resuming" : "Enabling"
-  evm_tail_enable = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [])
+  evm_tail_enable = LogValidator("/var/www/miq/vmdb/log/evm.log", matched_patterns: [".*#{match_enable} EMS \\[#{provider.name}\\] id \\[#{provider.id}\\].*"])
   evm_tail_enable.start_monitoring()
   if is_bool(from_collections)
     rep_enable = appliance.collections.containers_providers.resume_providers(provider)
-    soft_assert(rep_enable[0].get("success"), )
+    soft_assert(rep_enable[0].get("success"), "Enabling provider #{provider.name} failed")
   else
     rep_enable = provider.resume()
-    soft_assert(rep_enable.get("success"), )
+    soft_assert(rep_enable.get("success"), "Enabling provider #{provider.name} failed")
   end
-  soft_assert(provider.is_provider_enabled, )
+  soft_assert(provider.is_provider_enabled, "Provider #{provider.name} is still disabled")
   raise unless evm_tail_enable.validate()
   provider.refresh_provider_relationships()
-  soft_assert(wait_for(lambda{|| project.exists}, delay: 5, num_sec: 100, message: "waiting for project to display"), )
+  soft_assert(wait_for(lambda{|| project.exists}, delay: 5, num_sec: 100, message: "waiting for project to display"), "Project #{project_name} does not exists even though provider has been enabled")
 end

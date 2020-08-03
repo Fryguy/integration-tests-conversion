@@ -33,7 +33,7 @@ end
 def vm_retirement_report(appliance, retire_vm)
   report_data = {"menu_name" => "vm_retirement_requester", "title" => "VM Retirement Requester", "base_report_on" => "Virtual Machines", "report_fields" => ["Name", "Retirement Requester", "Retirement State"], "filter" => {"primary_filter" => "fill_field(Virtual Machine : Name, =, {})".format(retire_vm)}}
   report = appliance.collections.reports.create(None: report_data)
-  yield [retire_vm, report]
+  yield([retire_vm, report])
   report.delete()
 end
 def test_retire_vm_now(appliance, vm, from_collection)
@@ -161,7 +161,7 @@ def test_check_vm_retirement_requester(appliance, request, provider, vm_retireme
   #   
   vm_name,report = vm_retirement_report
   saved_report = report.queue(wait_for_finish: true)
-  requester_id = appliance.rest_api.collections.requests.filter(Q("description", "=", )).resources[0].requester_id
+  requester_id = ((appliance.rest_api.collections.requests.filter(Q("description", "=", "VM Retire for: #{vm_name}*"))).resources[0]).requester_id
   requester_userid = appliance.rest_api.collections.users.get(id: requester_id).userid
   row_data = saved_report.data.find_row("Name", vm_name)
   raise unless [row_data["Name"], row_data["Retirement Requester"], row_data["Retirement State"]] == [vm_name, requester_userid, "retired"]

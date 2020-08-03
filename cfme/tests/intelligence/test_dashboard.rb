@@ -6,7 +6,7 @@ include Cfme::Utils::Wait
 pytestmark = [test_requirements.dashboard, pytest.mark.tier(3)]
 AVAILABLE_WIDGETS = ["Top Memory Consumers (weekly)", "Vendor and Guest OS Chart", "EVM: Recently Discovered Hosts", "Top Storage Consumers", "Guest OS Information"]
 def widgets(dashboards)
-  yield dashboards.default.collections.widgets.all()
+  yield(dashboards.default.collections.widgets.all())
   dashboards.close_zoom()
   dashboards.default.collections.widgets.reset()
 end
@@ -21,9 +21,9 @@ def test_widgets_operation(dashboards, widgets, soft_assert, infra_provider)
   wait_for(lambda{|| widgets.map{|widget| !widget.blank}.is_all?}, timeout: "5m", delay: 10, fail_func: lambda{|| dashboards.refresh()})
   for widget in widgets
     widget.minimize()
-    soft_assert.(widget.minimized, )
+    soft_assert.(widget.minimized, "Widget #{widget.name} could not be minimized")
     widget.restore()
-    soft_assert.(!widget.minimized, )
+    soft_assert.(!widget.minimized, "Widget #{widget.name} could not be maximized")
     widget.footer
     widget.contents
     if ["chart", "table"].include?(widget.content_type)
@@ -53,11 +53,11 @@ def test_custom_dashboards(request, soft_assert, number_dashboards, dashboards, 
   dash_dict = dashboards_to_delete.map{|d|[d.title, d]}.to_h
   begin
     for dash in dashboards.all()
-      soft_assert.(dash_dict.include?(dash.name), )
+      soft_assert.(dash_dict.include?(dash.name), "Dashboard #{dash.name} not found!")
       dash.dashboard_view.click()
       if dash_dict.keys().to_a.include?(dash.name)
         for widget in dash.collections.widgets.all()
-          soft_assert.(dash_dict[dash.name].widgets.include?(widget.name), )
+          soft_assert.(dash_dict[dash.name].widgets.include?(widget.name), "Widget #{widget.name} not found in #{dash.name}!")
         end
         dash_dict = nil
       end

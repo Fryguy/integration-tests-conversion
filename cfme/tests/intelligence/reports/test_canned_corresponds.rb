@@ -37,7 +37,7 @@ def test_providers_summary(appliance, soft_assert, request, setup_provider)
   #   
   report = appliance.collections.reports.instantiate(type: "Configuration Management", subtype: "Providers", menu_name: "Providers Summary").queue(wait_for_finish: true)
   request.addfinalizer(report.delete)
-  skipped_providers = 
+  skipped_providers = Set.new(["ec2", "openstack", "redhat_network", "embedded_ansible_automation"])
   for provider in report.data.rows
     if skipped_providers.include?(provider["MS Type"])
       next
@@ -77,7 +77,7 @@ def test_cluster_relationships(appliance, request, soft_assert, setup_provider)
     host_name = relation["Host Name"].strip()
     cluster_list = is_bool(provider.is_a? SCVMMProvider) ? provider.mgmt.list_clusters() : provider.mgmt.list_cluster()
     verified_cluster = cluster_list.select{|item| item.include?(name)}.map{|item| item}
-    soft_assert.(verified_cluster, )
+    soft_assert.(verified_cluster, "Cluster #{name} not found in #{provider_name}")
     if is_bool(!host_name)
       next
     end
@@ -117,7 +117,7 @@ def test_cluster_relationships(appliance, request, soft_assert, setup_provider)
       end
     end
     if __dummy0__
-      soft_assert.(false, )
+      soft_assert.(false, "Hostname #{host_name} not found in #{provider_name}")
     end
   end
 end
@@ -147,10 +147,10 @@ def test_operations_vm_on(soft_assert, temp_appliance_preconfig_funcscope, reque
   raise unless vms_in_db.size == report.data.rows.to_a.size
   vm_names = vms_in_db.map{|vm| vm.vm_name}
   for vm in vms_in_db
-    raise  unless vm_names.count(vm.vm_name) == 1
+    raise "There is a duplicate entry in DB for VM #{vm.vm_name}" unless vm_names.count(vm.vm_name) == 1
     store_path = vm.vm_location
     if is_bool(vm.storages_name)
-      store_path = 
+      store_path = "#{vm.storages_name}/#{store_path}"
     end
     for item in report.data.rows
       if vm.vm_name == item["VM Name"]

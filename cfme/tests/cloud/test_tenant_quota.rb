@@ -22,7 +22,7 @@ def set_default(provider, request)
   #      must be used in all tests of quota which are related to services where catalog item needs to
   #      be created with specific values for these entries.
   #   
-  with_prov = ["Datastore", "ManageIQ (Locked)", , "VM", "Provisioning", "StateMachines", "ProvisionRequestApproval", "Default"]
+  with_prov = ["Datastore", "ManageIQ (Locked)", "#{provider.string_name}", "VM", "Provisioning", "StateMachines", "ProvisionRequestApproval", "Default"]
   default = ["Service", "Provisioning", "StateMachines", "ServiceProvision_Template", "CatalogItemInitialization"]
   return is_bool(request.param) ? with_prov : default
 end
@@ -44,14 +44,14 @@ end
 def set_roottenant_quota(request, appliance)
   roottenant = appliance.collections.tenants.get_root_tenant()
   field,value = request.param
-  roottenant.set_quota(None: { => true, "field" => value})
+  roottenant.set_quota(None: {"#{field}_cb" => true, "field" => value})
   yield
   appliance.server.browser.refresh()
-  roottenant.set_quota(None: { => false})
+  roottenant.set_quota(None: {"#{field}_cb" => false})
 end
 def catalog_item(appliance, provider, provisioning, template_name, dialog, catalog, prov_data, set_default)
   catalog_item = appliance.collections.catalog_items.create(provider.catalog_item_type, name: fauxfactory.gen_alphanumeric(start: "test_"), description: fauxfactory.gen_alphanumeric(start: "desc_"), display_in: true, catalog: catalog, dialog: dialog, prov_data: prov_data, provisioning_entry_point: set_default)
-  yield catalog_item
+  yield(catalog_item)
   catalog_item.delete_if_exists()
 end
 def test_tenant_quota_enforce_via_lifecycle_cloud(request, appliance, provider, set_roottenant_quota, extra_msg, custom_prov_data, approve, prov_data, vm_name, template_name)
@@ -67,7 +67,7 @@ def test_tenant_quota_enforce_via_lifecycle_cloud(request, appliance, provider, 
   prov_data["catalog"]["vm_name"] = vm_name
   prov_data.update({"request" => {"email" => fauxfactory.gen_email()}})
   prov_data.update({"template_name" => template_name})
-  request_description = 
+  request_description = "Provision from [#{template_name}] to [#{vm_name}#{extra_msg}]"
   appliance.collections.cloud_instances.create(vm_name, provider, prov_data, auto_approve: approve, override: true, request_description: request_description)
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
@@ -90,7 +90,7 @@ def test_tenant_quota_enforce_via_service_cloud(request, appliance, context, set
     end
     service_catalogs.order()
   }
-  request_description = 
+  request_description = "Provisioning Service [#{catalog_item.name}] from [#{catalog_item.name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
   request.addfinalizer(provision_request.remove_request)
@@ -125,7 +125,7 @@ def test_service_cloud_tenant_quota_with_default_entry_point(request, appliance,
     end
     service_catalogs.order()
   }
-  request_description = 
+  request_description = "Provisioning Service [#{catalog_item.name}] from [#{catalog_item.name}]"
   provision_request = appliance.collections.requests.instantiate(request_description)
   provision_request.wait_for_request(method: "ui")
   request.addfinalizer(provision_request.remove_request)
@@ -137,7 +137,7 @@ def instance(appliance, provider, small_template, setup_provider)
   if is_bool(!instance.exists_on_provider)
     instance.create_on_provider(allow_skip: "default", find_in_cfme: true)
   end
-  yield instance
+  yield(instance)
   instance.cleanup_on_provider()
 end
 def test_instance_quota_reconfigure_with_flavors(request, instance, set_roottenant_quota)
@@ -178,7 +178,7 @@ def test_instance_quota_reconfigure_with_flavors(request, instance, set_roottena
   current_instance_type = instance.appliance.rest_api.collections.flavors.get(id: instance.rest_api_entity.flavor_id).name
   flavor_name = (current_instance_type != "m1.small") ? "m1.small (1 CPU, 2.0 GB RAM, 20.0 GB Root Disk)" : "m1.tiny (1 CPU, 0.5 GB RAM, 1.0 GB Root Disk)"
   instance.reconfigure(flavor_name)
-  provision_request = instance.appliance.collections.requests.instantiate()
+  provision_request = instance.appliance.collections.requests.instantiate("VM Cloud Reconfigure for: #{instance.name} - Flavor: #{flavor_name.split_p(" ")[0]}")
   provision_request.wait_for_request(method: "ui")
   request.addfinalizer(provision_request.remove_request)
   raise "Instance reconfigure failed: {}".format(provision_request.row.last_message.text) unless provision_request.is_succeeded(method: "ui")
