@@ -1,0 +1,7 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift("/Users/jfrey/projects/external/ruby2js/lib")
+require 'ruby2js'
+
+contents = ARGV[0] ? File.read(ARGV[0]) : STDIN.read
+puts Ruby2JS.convert(contents)

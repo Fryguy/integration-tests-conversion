@@ -1,0 +1,9 @@
+#!/bin/bash
+
+rm -rf tmp
+for rb in $(find cfme/tests -name '*.rb'); do
+  echo "** $rb"
+  js=${rb%.rb}.js
+  mkdir -p tmp/$(dirname "$js")
+  ./rb2js $rb > "tmp/$js"
+done
