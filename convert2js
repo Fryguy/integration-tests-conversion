@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 rm -rf tmp
 for rb in $(find cfme/tests -name '*.rb'); do
   echo "** $rb"

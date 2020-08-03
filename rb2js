@@ -1,7 +1,56 @@
 #!/usr/bin/env ruby
 
-$LOAD_PATH.unshift("/Users/jfrey/projects/external/ruby2js/lib")
 require 'ruby2js'
 
+module Ruby2JS
+  class Converter
+    handle :yield do |value=nil|
+      put "yield"
+      if value
+        put "("
+        parse value
+        put ")"
+      end
+    end
+
+    handle :alias do |dest, src|
+      put "var #{dest.to_a.last} = #{src.to_a.last}.bind(this)"
+    end
+
+    # OVERRIDE to handle arguments to next
+    handle :next do |n=nil|
+      if n
+        parse n
+        put " // next"
+      else
+        put @next_token.to_s
+      end
+    end
+  end
+
+
+  module Filter
+    module MyFilter
+      include SEXP
+
+      def on_erange(node)
+        process s(:send, s(:lvar, :_), :range, *node.children)
+      end
+
+      def on_irange(node)
+        if node.children.last.type == :int
+          process S(:call, s(:lvar, :_), :range, node.children.first,
+            s(:int, node.children.last.children.last+1))
+        else
+          process S(:call, s(:lvar, :_), :range, node.children.first,
+            s(:send, node.children.last, :+, s(:int, 1)))
+        end
+      end
+    end
+
+    DEFAULTS.push MyFilter
+  end
+end
+
 contents = ARGV[0] ? File.read(ARGV[0]) : STDIN.read
-puts Ruby2JS.convert(contents)
+puts Ruby2JS.convert(contents, eslevel: 2020)
