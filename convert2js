@@ -2,10 +2,12 @@
 
 set -e
 
-rm -rf tmp
-for rb in $(find cfme/tests -name '*.rb'); do
-  echo "** $rb"
-  js=${rb%.rb}.js
-  mkdir -p tmp/$(dirname "$js")
-  ./rb2js $rb > "tmp/$js"
+dest="js"
+rm -rf "$dest"
+for rb in $(find rb/cfme/tests -name '*.rb'); do
+  base=${rb#rb/}
+  echo "** $base"
+  js="$dest/${base%.rb}.js"
+  mkdir -p $(dirname "$js")
+  ./rb2js "$rb" > "$js"
 done
