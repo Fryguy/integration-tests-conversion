@@ -228,7 +228,7 @@ def test_validate_cpu_usage_cost(chargeback_costs_custom, chargeback_report_cust
     estimated_cpu_usage_cost = chargeback_costs_custom["cpu_used_cost"]
     cost_from_report = chargeback_report_custom[0]["CPU Used Cost"]
     cost = cost_from_report.gsub("$", "").gsub(",", "")
-    soft_assert.((estimated_cpu_usage_cost - DEVIATION <= cost.to_f) and (cost.to_f <= estimated_cpu_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
+    soft_assert.((estimated_cpu_usage_cost - DEVIATION <= cost.to_f) && (cost.to_f <= estimated_cpu_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
   end
 end
 def test_validate_memory_usage_cost(chargeback_costs_custom, chargeback_report_custom, interval, provider, soft_assert)
@@ -247,7 +247,7 @@ def test_validate_memory_usage_cost(chargeback_costs_custom, chargeback_report_c
     estimated_memory_usage_cost = chargeback_costs_custom["memory_used_cost"]
     cost_from_report = chargeback_report_custom[0]["Memory Used Cost"]
     cost = cost_from_report.gsub("$", "").gsub(",", "")
-    soft_assert.((estimated_memory_usage_cost - DEVIATION <= cost.to_f) and (cost.to_f <= estimated_memory_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
+    soft_assert.((estimated_memory_usage_cost - DEVIATION <= cost.to_f) && (cost.to_f <= estimated_memory_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
   end
 end
 def test_validate_network_usage_cost(chargeback_costs_custom, chargeback_report_custom, interval, provider, soft_assert)
@@ -266,7 +266,7 @@ def test_validate_network_usage_cost(chargeback_costs_custom, chargeback_report_
     estimated_network_usage_cost = chargeback_costs_custom["network_used_cost"]
     cost_from_report = chargeback_report_custom[0]["Network I/O Used Cost"]
     cost = cost_from_report.gsub("$", "").gsub(",", "")
-    soft_assert.((estimated_network_usage_cost - DEVIATION <= cost.to_f) and (cost.to_f <= estimated_network_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
+    soft_assert.((estimated_network_usage_cost - DEVIATION <= cost.to_f) && (cost.to_f <= estimated_network_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
   end
 end
 def test_validate_disk_usage_cost(chargeback_costs_custom, chargeback_report_custom, interval, provider, soft_assert)
@@ -285,7 +285,7 @@ def test_validate_disk_usage_cost(chargeback_costs_custom, chargeback_report_cus
     estimated_disk_usage_cost = chargeback_costs_custom["disk_used_cost"]
     cost_from_report = chargeback_report_custom[0]["Disk I/O Used Cost"]
     cost = cost_from_report.gsub("$", "").gsub(",", "")
-    soft_assert.((estimated_disk_usage_cost - DEVIATION <= cost.to_f) and (cost.to_f <= estimated_disk_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
+    soft_assert.((estimated_disk_usage_cost - DEVIATION <= cost.to_f) && (cost.to_f <= estimated_disk_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
   end
 end
 def test_validate_storage_usage_cost(chargeback_costs_custom, chargeback_report_custom, interval, provider, soft_assert)
@@ -304,6 +304,6 @@ def test_validate_storage_usage_cost(chargeback_costs_custom, chargeback_report_
     estimated_storage_usage_cost = chargeback_costs_custom["storage_used_cost"]
     cost_from_report = chargeback_report_custom[0]["Storage Used Cost"]
     cost = cost_from_report.gsub("$", "").gsub(",", "")
-    soft_assert.((estimated_storage_usage_cost - DEVIATION <= cost.to_f) and (cost.to_f <= estimated_storage_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
+    soft_assert.((estimated_storage_usage_cost - DEVIATION <= cost.to_f) && (cost.to_f <= estimated_storage_usage_cost + DEVIATION), "Estimated cost and report cost do not match")
   end
 end

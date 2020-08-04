@@ -33,10 +33,10 @@ def template(request, appliance, provider, vm)
     appliance.rest_api.collections.templates.action.delete(*[template])
     begin
       provider.mgmt.get_template(template.name).delete()
-    rescue NotFoundError
-      logger.error("Failed to delete template. No template found with name {}".format(template.name))
-    rescue MultipleItemsError
-      logger.error("Failed to delete template. Multiple templates found with name {}".format(template.name))
+    # rescue NotFoundError
+    #   logger.error("Failed to delete template. No template found with name {}".format(template.name))
+    # rescue MultipleItemsError
+    #   logger.error("Failed to delete template. Multiple templates found with name {}".format(template.name))
     rescue Exception => e
       logger.error("Failed to delete template. #{e}")
     end

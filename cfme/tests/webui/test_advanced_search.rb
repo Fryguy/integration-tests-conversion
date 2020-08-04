@@ -135,10 +135,7 @@ def methodized(metafunc)
   #   works just for specific functions in this file, would be nice to generalize
   #   TODO generalize for more tests with possibly different arguments
   #   
-  func = lambda do |self, param, appliance|
-    return metafunc(param, appliance)
-  end
-  func.__doc__ = metafunc.__doc__
+  func.__doc__ = method(metafunc).__doc__
   return func
 end
 def inject_tests(metaclass)

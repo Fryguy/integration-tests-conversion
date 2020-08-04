@@ -257,7 +257,7 @@ def generic_test_chargeback_cost(chargeback_costs_custom, chargeback_report_cust
     estimated_resource_alloc_cost = chargeback_costs_custom[resource_alloc_cost]
     cost_from_report = chargeback_report_custom[0][column]
     cost = cost_from_report.gsub("$", "").gsub(",", "")
-    soft_assert.((estimated_resource_alloc_cost - COST_DEVIATION <= cost.to_f) and (cost.to_f <= estimated_resource_alloc_cost + COST_DEVIATION), "Estimated cost and report cost do not match")
+    soft_assert.((estimated_resource_alloc_cost - COST_DEVIATION <= cost.to_f) && (cost.to_f <= estimated_resource_alloc_cost + COST_DEVIATION), "Estimated cost and report cost do not match")
   end
 end
 def generic_test_resource_alloc(resource_alloc, chargeback_report_custom, column, resource, soft_assert)
@@ -282,7 +282,7 @@ def generic_test_resource_alloc(resource_alloc, chargeback_report_custom, column
     resource_from_report = resource_from_report.gsub("MB", "")
     lower_end = allocated_resource - RESOURCE_ALLOC_DEVIATION
     upper_end = allocated_resource + RESOURCE_ALLOC_DEVIATION
-    soft_assert.((lower_end <= resource_from_report.to_f) and (resource_from_report.to_f <= upper_end), "Estimated resource allocation and report resource allocation do not match")
+    soft_assert.((lower_end <= resource_from_report.to_f) && (resource_from_report.to_f <= upper_end), "Estimated resource allocation and report resource allocation do not match")
   end
 end
 def test_verify_alloc_memory(resource_alloc, chargeback_report_custom, soft_assert)

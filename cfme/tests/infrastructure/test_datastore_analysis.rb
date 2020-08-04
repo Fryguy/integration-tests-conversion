@@ -26,7 +26,7 @@ def pytest_generate_tests(metafunc)
   new_idlist = []
   new_argvalues = []
   for (index, argvalue_tuple) in enumerate(argvalues)
-    args = {zip_p(argnames, argvalue_tuple).to_a}
+    args = Hash(zip_p(argnames, argvalue_tuple).to_a)
     provider_arg = args["provider"]
     datastores = provider_arg.data.get("datastores", {})
     testable_datastores = datastores.select{|ds| ds.get("test_fleece", false) && DATASTORE_TYPES.include?(ds.get("type"))}.map{|ds| [ds.get("type"), ds.get("name")]}
@@ -34,7 +34,7 @@ def pytest_generate_tests(metafunc)
     for (ds_type, ds_name) in testable_datastores
       new_argvalues.push([provider_arg, ds_type, ds_name])
       new_idlist.push("#{idlist[index]}-#{ds_type}")
-      if (ds_type, ds_name) == testable_datastores[-1]
+      if [ds_type, ds_name] == testable_datastores[-1]
         __dummy0__ = true
       end
     end

@@ -23,15 +23,15 @@ def empty_ntp(ntp_server_keys)
 end
 def random_ntp(ntp_server_keys)
   # Return dictionary of NTP server keys with random alphanumeric values
-  return {zip_p(ntp_server_keys, 3.times.map{|_| fauxfactory.gen_alphanumeric()})}
+  return Hash(zip_p(ntp_server_keys, 3.times.map{|_| fauxfactory.gen_alphanumeric()}))
 end
 def random_max_ntp(ntp_server_keys)
   # Return dictionary of NTP server keys with random alphanumeric values of max length
-  return {zip_p(ntp_server_keys, 3.times.map{|_| fauxfactory.gen_alphanumeric(255)})}
+  return Hash(zip_p(ntp_server_keys, 3.times.map{|_| fauxfactory.gen_alphanumeric(255)}))
 end
 def config_ntp(ntp_server_keys)
   # Return dictionary of NTP server keys with server names from config yaml
-  return {zip_p(ntp_server_keys, cfme_data["clock_servers"])}
+  return Hash(zip_p(ntp_server_keys, cfme_data["clock_servers"]))
 end
 def appliance_date(appliance)
   # Return appliance server datetime, in ISO-8601 format
