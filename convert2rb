@@ -1,0 +1,11 @@
+#!/bin/bash
+
+dest="/tmp/rbfiles"
+
+rm -rf $dest
+for py in $(find cfme/tests -name '*.py'); do
+  echo "** $py"
+  rb="$dest/${py%.py}.rb"
+  mkdir -p $(dirname $rb)
+  py2rb "$py" > "$rb"
+done
